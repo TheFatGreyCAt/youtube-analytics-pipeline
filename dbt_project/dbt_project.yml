@@ -1,0 +1,84 @@
+name: 'yt_analytics_pipeline'
+version: '2.0.0'
+config-version: 2
+
+profile: 'yt_analytics_pipeline'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Model layer configuration - 4-layer architecture
+models:
+  yt_analytics_pipeline:
+    # Layer 1: Landing/Source - Raw data from external systems (managed by Fivetran)
+    # No transformations, only schema definitions
+    landing:
+      +materialized: view
+      +schema: landing
+      tags:
+        - landing
+        - raw_data
+    
+    # Layer 2: Staging - Clean, normalize, standardize raw data
+    # Field renaming, type casting, removing duplicates, filtering
+    staging:
+      +materialized: view
+      +schema: staging
+      tags:
+        - staging
+        - cleaned_data
+    
+    # Layer 3: Intermediate - Business logic, calculations, intermediate tables
+    # Engagement rate calculations, age categorizations, growth metrics
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+      tags:
+        - intermediate
+        - business_logic
+    
+    # Layer 4: Mart/Analytics - Final tables for reporting and BI tools
+    # Fact tables (fct_*) and Dimension tables (dim_*)
+    mart:
+      +materialized: table
+      +schema: mart
+      +index:
+        - columns: [id]
+          unique: true
+      tags:
+        - mart
+        - analytics
+        - production
+
+# Variable definitions
+vars:
+  # YouTube API configuration
+  youtube_analytics_schema: 'your_schema_name'
+  youtube__using_channel_demographics: false  # Set to true if demographics data is available
+  
+  # Data freshness settings
+  youtube_api_freshness_warn_hours: 12
+  youtube_api_freshness_error_hours: 24
+  
+  # Analysis settings
+  include_private_videos: false  # Set to true to include private videos in analysis
+  include_unlisted_playlists: false  # Set to true to include unlisted playlists
+
+# Seed configuration
+seeds:
+  yt_analytics_pipeline:
+    +schema: seeds
+    +tags:
+      - seed_data
+
+# Package dependencies
+require-dbt-version: [">=1.5.0", "<2.0.0"]

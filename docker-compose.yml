@@ -1,0 +1,110 @@
+version: '3.9'
+
+services:
+  # Prefect Server
+  prefect-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: youtube-prefect-server
+    ports:
+      - "4200:4200"  # Prefect UI
+    environment:
+      - PREFECT_API_URL=http://prefect-server:4200/api
+      - PREFECT_HOME=/home/appuser/.prefect
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - BQ_DATASET_ID=${BQ_DATASET_ID}
+      - YOUTUBE_CHANNEL_ID=${YOUTUBE_CHANNEL_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service-account-key.json
+    volumes:
+      - prefect-data:/home/appuser/.prefect
+      - ./credentials:/app/credentials:ro
+      - ./extract:/app/extract
+      - ./prefect:/app/prefect
+    networks:
+      - youtube-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4200/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - prefect-db
+
+  # PostgreSQL Database for Prefect
+  prefect-db:
+    image: postgres:16-alpine
+    container_name: youtube-prefect-db
+    environment:
+      POSTGRES_USER: prefect
+      POSTGRES_PASSWORD: prefect123
+      POSTGRES_DB: prefect
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - youtube-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prefect"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Prefect Agent (for running flows)
+  prefect-agent:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: youtube-prefect-agent
+    command: prefect agent start -q default
+    environment:
+      - PREFECT_API_URL=http://prefect-server:4200/api
+      - PREFECT_HOME=/home/appuser/.prefect
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - BQ_DATASET_ID=${BQ_DATASET_ID}
+      - YOUTUBE_CHANNEL_ID=${YOUTUBE_CHANNEL_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service-account-key.json
+    volumes:
+      - ./credentials:/app/credentials:ro
+      - ./extract:/app/extract
+      - ./prefect:/app/prefect
+      - prefect-agent-data:/home/appuser/.prefect
+    networks:
+      - youtube-network
+    depends_on:
+      prefect-server:
+        condition: service_healthy
+
+  # Optional: Jupyter Notebook for exploration
+  jupyter:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.jupyter
+    container_name: youtube-jupyter
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - BQ_DATASET_ID=${BQ_DATASET_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service-account-key.json
+    volumes:
+      - ./extract:/app/extract
+      - ./credentials:/app/credentials:ro
+      - jupyter-data:/home/appuser/.jupyter
+    networks:
+      - youtube-network
+    command: jupyter lab --ip=0.0.0.0 --no-browser --allow-root
+
+volumes:
+  prefect-data:
+  prefect-agent-data:
+  postgres-data:
+  jupyter-data:
+
+networks:
+  youtube-network:
+    driver: bridge

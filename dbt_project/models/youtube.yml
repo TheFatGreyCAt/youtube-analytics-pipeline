@@ -1,0 +1,328 @@
+version: 2
+
+sources:
+  - name: youtube_api_raw
+    description: |
+      Raw data từ YouTube Data API v3 (videos.list, channels.list, playlists.list) 
+      và YouTube Analytics API (reports.query cho daily metrics).
+      FREE quota: 10k units/ngày.
+    schema: your_project.youtube_raw
+    freshness:
+      warn_after: { count: 12, period: hour }
+      error_after: { count: 24, period: hour }
+    
+    tables:
+      - name: dim_video
+        description: |
+          Video metadata từ YouTube Data API v3 videos.list endpoint.
+          Bao gồm: metadata (title, description, tags), statistics (views, likes, comments),
+          content details (duration, caption, definition), status (privacy, embeddable).
+        columns:
+          - name: video_id
+            description: Unique identifier of the video (PK)
+            tests:
+              - unique
+              - not_null
+          - name: snippet_channel_id
+            description: Unique identifier of the video channel (FK to dim_channel)
+            tests:
+              - not_null
+          - name: snippet_channel_title
+            description: Title of the channel that published the video
+          - name: snippet_title
+            description: Title of the video - used for search, recognition in reports
+          - name: snippet_description
+            description: Description of the video - used for keyword (SEO), link analysis
+          - name: snippet_published_at
+            description: |
+              Timestamp when the video was published - CRITICAL for trend analysis over time.
+              Used for grouping by publish date/time periods.
+            tests:
+              - not_null
+          - name: snippet_tags
+            description: |
+              Tags associated with the video (ARRAY<STRING>) - used for topic analysis,
+              keyword trends, content categorization.
+          - name: snippet_category_id
+            description: |
+              Category ID of the video (Maps to YouTube category) - used for performance 
+              analysis by category (e.g., Music vs Gaming).
+          - name: snippet_default_language
+            description: |
+              Default language of the video - used for performance analysis by language,
+              regional insights.
+          - name: snippet_live_broadcast_content
+            description: |
+              Indicates if the video is a livestream (none/live/upcoming) - 
+              used to differentiate regular videos from livestreams.
+          - name: statistics_view_count
+            description: |
+              Total view count of the video - MOST IMPORTANT metric for video performance.
+              Used as primary KPI in dashboards.
+            tests:
+              - dbt_utils.expression_is_true:
+                  expression: ">= 0"
+          - name: statistics_like_count
+            description: |
+              Total likes on the video - engagement metric indicating viewer satisfaction.
+              Used for engagement analysis.
+            tests:
+              - dbt_utils.expression_is_true:
+                  expression: ">= 0"
+          - name: statistics_comment_count
+            description: |
+              Total comments on the video - discussion/engagement metric indicating 
+              content resonance with audience.
+            tests:
+              - dbt_utils.expression_is_true:
+                  expression: ">= 0"
+          - name: content_details_duration_raw
+            description: |
+              Video duration in ISO 8601 format (e.g., PT1H23M45S) - raw format from API.
+              Must be parsed to extract seconds for analysis.
+          - name: content_details_duration_seconds
+            description: |
+              Video duration in seconds - parsed from ISO 8601.
+              Used to differentiate video types (Shorts <60s vs Long-form) and their impact on views.
+            tests:
+              - dbt_utils.expression_is_true:
+                  expression: ">= 0"
+          - name: content_details_caption
+            description: |
+              Boolean indicating if video has captions (true/false) - 
+              affects accessibility and video reach/discoverability.
+          - name: content_details_definition
+            description: |
+              Video definition (sd/hd) - technical quality indicator.
+          - name: privacy_status
+            description: |
+              Privacy status of the video (public/private/unlisted) - 
+              used to filter videos for public reporting and analysis.
+            tests:
+              - accepted_values:
+                  values: ['public', 'private', 'unlisted']
+          - name: status_embeddable
+            description: Indicates if the video is embeddable on other websites.
+          - name: status_made_for_kids
+            description: |
+              Boolean indicating if the video is marked as made for kids (COPPA compliance) -
+              affects monetization and recommendation algorithms.
+          - name: _crawled_at
+            description: Timestamp when the data was crawled/ingested from YouTube API.
+
+      - name: dim_channel
+        description: |
+          Channel metadata từ YouTube Data API v3 channels.list endpoint.
+          Bao gồm: channel info (title, country, description), statistics 
+          (subscribers, views, video count), topic details, uploads playlist ID.
+        columns:
+          - name: channel_id
+            description: Unique identifier of the channel (PK)
+            tests:
+              - unique
+              - not_null
+          - name: snippet_title
+            description: |
+              Title/name of the channel - used for display in reports, dashboards, and channel identification.
+          - name: snippet_published_at
+            description: |
+              Channel creation/published date - used to calculate channel age (lifetime) and 
+              compare growth speed (e.g., channel 1 year old with 100k subs vs newer channels).
+            tests:
+              - not_null
+          - name: snippet_country
+            description: |
+              Country of the channel origin - used for market analysis, target audience insights
+              (e.g., Vietnam channel performance vs US channel performance).
+          - name: snippet_description
+            description: |
+              Channel description - optional field for SEO keyword analysis of channel branding.
+          - name: statistics_subscriber_count
+            description: |
+              Total number of channel subscribers - KEY metric for evaluating channel scale 
+              and influence/reach.
+            tests:
+              - dbt_utils.expression_is_true:
+                  expression: ">= 0"
+          - name: statistics_view_count
+            description: |
+              Cumulative total view count across all videos in the channel - 
+              indicates historical audience reach and accumulated performance.
+            tests:
+              - dbt_utils.expression_is_true:
+                  expression: ">= 0"
+          - name: statistics_video_count
+            description: |
+              Total number of public videos uploaded to the channel - 
+              indicates content volume and publishing consistency.
+            tests:
+              - dbt_utils.expression_is_true:
+                  expression: ">= 0"
+          - name: topic_details_topic_ids
+            description: |
+              List of topic IDs (ARRAY<STRING>) assigned by YouTube to categorize channel content
+              (e.g., /m/04rlf - Music, /m/0bzvm2 - Gaming). More accurate than category_id for channel grouping.
+          - name: content_details_uploads
+            description: |
+              Playlist ID of the channel's "Uploads" playlist - contains all uploaded videos.
+              ESSENTIAL for automated video extraction from this channel in future processes.
+          - name: statistics_hidden_subscriber_count
+            description: Indicates if subscriber count is hidden from public view.
+          - name: _crawled_at
+            description: Timestamp when the data was crawled/ingested from YouTube API.
+
+      - name: dim_playlist
+        description: |
+          Playlist metadata từ YouTube Data API v3 playlists.list endpoint.
+          Bao gồm: playlist info (title, description), ownership (channel_id),
+          content details (item count), status (privacy).
+        columns:
+          - name: playlist_id
+            description: Unique identifier of the playlist (PK)
+            tests:
+              - unique
+              - not_null
+          - name: snippet_channel_id
+            description: |
+              Channel ID that owns the playlist (FK to dim_channel) - 
+              essential to answer: "How many playlists does this channel have?"
+            tests:
+              - not_null
+          - name: snippet_title
+            description: |
+              Title/name of the playlist - used for content classification (e.g., "Sad Music", 
+              "English Learning"). REQUIRED for reporting and content organization.
+          - name: snippet_published_at
+            description: |
+              Playlist creation date - used to analyze playlist creation frequency over time,
+              content organization patterns by channel.
+          - name: snippet_description
+            description: |
+              Playlist description - optional for deep SEO keyword analysis of content collections 
+              that channels use to describe their video curations.
+          - name: content_details_item_count
+            description: |
+              Number of videos in the playlist - indicates playlist scale.
+              Used to filter empty playlists or mega-playlists (data quality checks).
+            tests:
+              - dbt_utils.expression_is_true:
+                  expression: ">= 0"
+          - name: privacy_status
+            description: |
+              Privacy status of the playlist (public/private/unlisted) - 
+              used to exclude private playlists from public reporting.
+            tests:
+              - accepted_values:
+                  values: ['public', 'private', 'unlisted']
+          - name: _crawled_at
+            description: Timestamp when the data was crawled/ingested from YouTube API.
+
+models:
+  - name: stg_youtube__video
+    description: |
+      Staging model for video data - cleans and standardizes raw video metadata from YouTube API.
+      Transforms ISO 8601 duration to seconds, normalizes field names, handles nulls.
+    columns:
+      - name: video_id
+        description: Unique identifier of the video
+        tests:
+          - unique
+          - not_null
+      - name: channel_id
+        description: Channel ID this video belongs to
+        tests:
+          - not_null
+      - name: video_title
+        description: Cleaned video title
+      - name: video_description
+        description: Cleaned video description
+      - name: published_at
+        description: When the video was published
+      - name: tags
+        description: Array of video tags
+      - name: category_id
+        description: YouTube category ID
+      - name: default_language
+        description: Default language of the video
+      - name: live_broadcast_content
+        description: Livestream status (none/live/upcoming)
+      - name: channel_title
+        description: Title of the channel
+      - name: view_count
+        description: Total views
+      - name: like_count
+        description: Total likes
+      - name: comment_count
+        description: Total comments
+      - name: duration_seconds
+        description: Duration in seconds (parsed from ISO 8601)
+      - name: has_caption
+        description: Whether video has captions
+      - name: privacy_status
+        description: public/private/unlisted
+      - name: is_embeddable
+        description: Whether video is embeddable
+      - name: is_made_for_kids
+        description: COPPA - marked as made for kids
+      - name: _ingested_at
+        description: Timestamp data was ingested
+
+  - name: stg_youtube__channel
+    description: |
+      Staging model for channel data - cleans and standardizes raw channel metadata from YouTube API.
+      Normalizes field names, handles nulls, calculates derived metrics.
+    columns:
+      - name: channel_id
+        description: Unique identifier of the channel
+        tests:
+          - unique
+          - not_null
+      - name: channel_title
+        description: Cleaned channel title
+      - name: published_at
+        description: Channel creation date
+      - name: country
+        description: Country of the channel
+      - name: description
+        description: Channel description
+      - name: subscriber_count
+        description: Total subscribers
+      - name: view_count
+        description: Total cumulative views
+      - name: video_count
+        description: Total number of public videos
+      - name: topic_ids
+        description: Array of YouTube topic IDs
+      - name: uploads_playlist_id
+        description: ID of the uploads playlist
+      - name: hidden_subscriber_count
+        description: Whether subscriber count is hidden
+      - name: _ingested_at
+        description: Timestamp data was ingested
+
+  - name: stg_youtube__playlist
+    description: |
+      Staging model for playlist data - cleans and standardizes raw playlist metadata from YouTube API.
+      Normalizes field names, handles nulls.
+    columns:
+      - name: playlist_id
+        description: Unique identifier of the playlist
+        tests:
+          - unique
+          - not_null
+      - name: channel_id
+        description: Channel that owns this playlist
+        tests:
+          - not_null
+      - name: playlist_title
+        description: Cleaned playlist title
+      - name: published_at
+        description: When the playlist was created
+      - name: description
+        description: Playlist description
+      - name: item_count
+        description: Number of items in playlist
+      - name: privacy_status
+        description: public/private/unlisted
+      - name: _ingested_at
+        description: Timestamp data was ingested

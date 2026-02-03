@@ -1,0 +1,9 @@
+# Prefect flow dependencies
+prefect==3.0.0
+prefect-gcp==0.4.0
+google-cloud-bigquery==3.23.1
+google-api-python-client==1.12.8
+pandas==2.1.4
+python-dotenv==1.0.0
+dbt-core==1.7.0
+dbt-bigquery==1.7.0
