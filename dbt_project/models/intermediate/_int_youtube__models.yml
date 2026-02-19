@@ -1,0 +1,49 @@
+version: 2
+
+models:
+  - name: int_videos__enhanced
+    description: Videos enriched with channel context and derived temporal fields
+    columns:
+      - name: video_id
+        tests:
+          - unique
+          - not_null
+      - name: channel_id
+        tests:
+          - not_null
+      - name: duration_seconds
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 86400
+      - name: video_length_category
+        tests:
+          - accepted_values:
+              values: ['shorts', 'short', 'medium', 'long']
+
+  - name: int_engagement_metrics
+    description: Calculated engagement metrics per video
+    columns:
+      - name: video_id
+        tests:
+          - unique
+          - not_null
+      - name: engagement_score
+        tests:
+          - not_null
+      - name: engagement_level
+        tests:
+          - accepted_values:
+              values: ['high', 'medium', 'low']
+
+  - name: int_channel_summary
+    description: Aggregated channel-level statistics
+    columns:
+      - name: channel_id
+        tests:
+          - unique
+          - not_null
+      - name: total_videos_crawled
+        tests:
+          - not_null
