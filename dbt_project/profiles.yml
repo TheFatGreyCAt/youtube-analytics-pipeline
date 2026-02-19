@@ -1,0 +1,29 @@
+# Documentation: https://docs.getdbt.com/docs/get-started/connection-profiles
+
+yt_analytics_pipeline:
+  outputs:
+    dev:
+      project: "{{ env_var('GCP_PROJECT_ID') }}"
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+      dataset: "{{ env_var('BQ_DATASET_ID', 'raw_yt') }}"
+      location: asia-southeast1
+      type: bigquery
+      job_execution_timeout_seconds: 300
+      job_retries: 1
+      method: service-account
+      priority: interactive
+      threads: 4
+    
+    prod:
+      project: "{{ env_var('GCP_PROJECT_ID') }}"
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+      dataset: yt_dbt
+      location: asia-southeast1
+      type: bigquery
+      job_execution_timeout_seconds: 300
+      job_retries: 1
+      method: service-account
+      priority: interactive
+      threads: 4
+  
+  target: dev

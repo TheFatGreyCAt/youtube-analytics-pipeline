@@ -1,5 +1,5 @@
 name: 'yt_analytics_pipeline'
-version: '2.0.0'
+version: '1.0.0'
 config-version: 2
 
 profile: 'yt_analytics_pipeline'
@@ -16,69 +16,81 @@ clean-targets:
   - "target"
   - "dbt_packages"
 
-# Model layer configuration - 4-layer architecture
 models:
   yt_analytics_pipeline:
-    # Layer 1: Landing/Source - Raw data from external systems (managed by Fivetran)
-    # No transformations, only schema definitions
-    landing:
-      +materialized: view
-      +schema: landing
-      tags:
-        - landing
-        - raw_data
+    +persist_docs:
+      relation: true
+      columns: true
     
-    # Layer 2: Staging - Clean, normalize, standardize raw data
-    # Field renaming, type casting, removing duplicates, filtering
     staging:
       +materialized: view
       +schema: staging
-      tags:
-        - staging
-        - cleaned_data
+      +tags: ['staging']
     
-    # Layer 3: Intermediate - Business logic, calculations, intermediate tables
-    # Engagement rate calculations, age categorizations, growth metrics
     intermediate:
       +materialized: view
       +schema: intermediate
-      tags:
-        - intermediate
-        - business_logic
+      +tags: ['intermediate']
     
-    # Layer 4: Mart/Analytics - Final tables for reporting and BI tools
-    # Fact tables (fct_*) and Dimension tables (dim_*)
     mart:
       +materialized: table
       +schema: mart
-      +index:
-        - columns: [id]
-          unique: true
-      tags:
-        - mart
-        - analytics
-        - production
+      +tags: ['mart', 'production']
+      
+      fct_video_performance:
+        +materialized: incremental
+        +incremental_strategy: merge
+        +unique_key: video_id
+        +partition_by:
+          field: published_date
+          data_type: date
+          granularity: day
+        +cluster_by: ['channel_id', 'category_id']
+        +require_partition_filter: false
+      
+      agg_daily_metrics:
+        +materialized: incremental
+        +incremental_strategy: merge
+        +unique_key: date_channel_key
+        +partition_by:
+          field: metric_date
+          data_type: date
+          granularity: day
+        +cluster_by: ['channel_id']
 
-# Variable definitions
 vars:
-  # YouTube API configuration
-  youtube_analytics_schema: 'your_schema_name'
-  youtube__using_channel_demographics: false  # Set to true if demographics data is available
+  # Source configuration
+  youtube_raw_database: "{{ env_var('GCP_PROJECT_ID') }}"
+  youtube_raw_schema: "{{ env_var('BQ_DATASET_ID', 'raw_yt') }}"
   
-  # Data freshness settings
-  youtube_api_freshness_warn_hours: 12
-  youtube_api_freshness_error_hours: 24
+  # Passthrough columns (Fivetran-style customization)
+  # Users can add custom columns from raw data without editing SQL
+  youtube__video_passthrough_columns: []
+  # Example: 
+  # youtube__video_passthrough_columns:
+  #   - name: "custom_field"
+  #     alias: "my_custom_field"
   
-  # Analysis settings
-  include_private_videos: false  # Set to true to include private videos in analysis
-  include_unlisted_playlists: false  # Set to true to include unlisted playlists
+  youtube__channel_passthrough_columns: []
+  
+  # Union multiple sources (if tracking multiple YouTube accounts)
+  youtube__using_multiple_sources: false
+  youtube__union_schemas: []
+  # Example:
+  # youtube__union_schemas: ['raw_yt_account1', 'raw_yt_account2']
 
-# Seed configuration
 seeds:
   yt_analytics_pipeline:
     +schema: seeds
-    +tags:
-      - seed_data
+    youtube_categories:
+      +column_types:
+        category_id: string
+        category_name: string
+        description: string
 
-# Package dependencies
+tests:
+  yt_analytics_pipeline:
+    +store_failures: true
+    +schema: test_failures
+
 require-dbt-version: [">=1.5.0", "<2.0.0"]
