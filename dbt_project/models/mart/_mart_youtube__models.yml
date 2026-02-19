@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: fct_video_performance
+    description: Fact table for video-level performance analytics
+    config:
+      tags: ['mart', 'fact', 'incremental']
+    columns:
+      - name: video_id
+        tests:
+          - unique
+          - not_null
+      - name: published_date
+        tests:
+          - not_null
+      - name: engagement_score
+        tests:
+          - not_null
+
+  - name: dim_channel_summary
+    description: Dimension table for channel-level analytics
+    config:
+      tags: ['mart', 'dimension']
+    columns:
+      - name: channel_id
+        tests:
+          - unique
+          - not_null
+      - name: total_videos_crawled
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+
+  - name: agg_daily_metrics
+    description: Daily aggregated metrics per channel
+    config:
+      tags: ['mart', 'aggregate', 'incremental']
+    columns:
+      - name: date_channel_key
+        tests:
+          - unique
+          - not_null
+      - name: metric_date
+        tests:
+          - not_null
