@@ -1,0 +1,279 @@
+version: 2
+
+models:
+  - name: stg_youtube__videos
+    description: |
+      **Staging model for YouTube videos** - Flattened từ BigQuery raw JSON/STRUCT data.
+      
+      **Transformations:**
+      - Flatten nested JSON structure từ `youtube_videos_raw.data` column
+      - Cast data types (string → int64, timestamp, bool)
+      - Rename columns theo naming conventions
+      - Filter: Chỉ public videos (privacy_status = 'public')
+      
+      **Grain:** One row per video
+      
+      **Refresh:** Updated khi crawler chạy (default: daily per channel)
+    
+    config:
+      tags: ['staging', 'youtube', 'videos']
+    
+    columns:
+      - name: video_id
+        description: |
+          Unique video identifier (Primary Key)
+          Format: 11-character string (e.g., "dQw4w9WgXcQ")
+        tests:
+          - unique
+          - not_null
+      
+      - name: channel_id
+        description: Foreign key to channels
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_youtube__channels')
+              field: channel_id
+      
+      - name: title
+        description: Video title (plain text)
+        tests:
+          - not_null
+      
+      - name: description
+        description: Video description (may contain HTML entities)
+      
+      - name: tags
+        description: |
+          Array of tags
+          Type: ARRAY<STRING>
+      
+      - name: category_id
+        description: |
+          YouTube category ID
+          Examples: "10"=Music, "20"=Gaming, "24"=Entertainment, "27"=Education
+      
+      - name: published_at
+        description: Video publish timestamp (UTC)
+        tests:
+          - not_null
+      
+      - name: view_count
+        description: |
+          Total view count
+          Note: Updated with 24-48 hour delay by YouTube API
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+      
+      - name: like_count
+        description: |
+          Total like count
+          Note: Can be NULL if creator disabled likes visibility
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+      
+      - name: comment_count
+        description: |
+          Total comment count
+          Note: Can be NULL if comments disabled
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+      
+      - name: duration_iso8601
+        description: |
+          Video duration in ISO 8601 format
+          Examples: "PT15M30S" (15 min 30 sec), "PT1H23M45S" (1h 23m 45s)
+          Use macro parse_iso8601_duration() to convert to seconds
+        tests:
+          - not_null
+      
+      - name: has_caption
+        description: Whether video has captions/subtitles
+      
+      - name: definition
+        description: |
+          Video quality definition
+          Values: "hd" or "sd"
+      
+      - name: privacy_status
+        description: |
+          Privacy status (filtered to 'public' only in this model)
+          Values: "public", "private", "unlisted"
+        tests:
+          - accepted_values:
+              values: ['public']
+      
+      - name: is_embeddable
+        description: Whether video can be embedded on other websites
+      
+      - name: is_made_for_kids
+        description: COPPA compliance flag
+      
+      - name: crawled_at
+        description: Timestamp when data was crawled from YouTube API
+        tests:
+          - not_null
+      
+      - name: dbt_loaded_at
+        description: Timestamp when dbt model was executed
+
+  - name: stg_youtube__channels
+    description: |
+      **Staging model for YouTube channels** - Flattened từ BigQuery raw JSON/STRUCT data.
+      
+      **Transformations:**
+      - Flatten nested JSON structure từ `youtube_channels_raw.data` column
+      - Cast data types
+      - Extract uploads playlist ID (important for fetching all videos)
+      
+      **Grain:** One row per channel
+      
+      **Refresh:** Updated khi crawler chạy
+    
+    config:
+      tags: ['staging', 'youtube', 'channels']
+    
+    columns:
+      - name: channel_id
+        description: |
+          Unique channel identifier (Primary Key)
+          Format: 24-character string starting with "UC"
+        tests:
+          - unique
+          - not_null
+      
+      - name: channel_name
+        description: Channel display name/title
+        tests:
+          - not_null
+      
+      - name: description
+        description: Channel description/bio
+      
+      - name: channel_created_at
+        description: Channel creation timestamp
+        tests:
+          - not_null
+      
+      - name: country_code
+        description: |
+          Country code (ISO 3166-1 alpha-2)
+          Examples: "US", "VN", "GB"
+      
+      - name: custom_url
+        description: |
+          Custom URL slug (if available)
+          Example: "@LinusTechTips"
+      
+      - name: subscriber_count
+        description: |
+          Total subscriber count
+          Note: Can be 0 if hidden by creator
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      
+      - name: total_view_count
+        description: Total views across all channel videos
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      
+      - name: video_count
+        description: Total number of public videos on channel
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      
+      - name: has_hidden_subscribers
+        description: Boolean flag - true if subscriber count is hidden
+      
+      - name: uploads_playlist_id
+        description: |
+          **IMPORTANT:** Playlist ID containing all channel uploads
+          Format: Starts with "UU" (same as channel_id but UC→UU)
+          Used to fetch all videos from channel
+      
+      - name: topic_ids
+        description: |
+          Array of topic IDs for channel categorization
+          Type: ARRAY<STRING>
+          Example: ["/m/04rlf"] = Music
+      
+      - name: crawled_at
+        description: Timestamp when data was crawled
+        tests:
+          - not_null
+
+  - name: stg_youtube__playlists
+    description: |
+      **Staging model for YouTube playlists** - Flattened từ BigQuery raw JSON/STRUCT data.
+      
+      **Transformations:**
+      - Flatten nested JSON structure
+      - Filter: Chỉ public playlists
+      
+      **Grain:** One row per playlist
+      
+      **Limitations:** Private playlists không accessible qua YouTube API
+    
+    config:
+      tags: ['staging', 'youtube', 'playlists']
+    
+    columns:
+      - name: playlist_id
+        description: Unique playlist identifier (Primary Key)
+        tests:
+          - unique
+          - not_null
+      
+      - name: channel_id
+        description: Foreign key to channels
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_youtube__channels')
+              field: channel_id
+      
+      - name: playlist_name
+        description: Playlist title
+        tests:
+          - not_null
+      
+      - name: description
+        description: Playlist description
+      
+      - name: created_at
+        description: Playlist creation timestamp
+        tests:
+          - not_null
+      
+      - name: item_count
+        description: Number of videos in playlist
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      
+      - name: privacy_status
+        description: |
+          Privacy status (filtered to 'public' only)
+          Values: "public", "private", "unlisted"
+        tests:
+          - accepted_values:
+              values: ['public']
+      
+      - name: crawled_at
+        description: Timestamp when data was crawled
+        tests:
+          - not_null
