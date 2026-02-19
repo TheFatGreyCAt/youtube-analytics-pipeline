@@ -1,244 +1,136 @@
 version: 2
 
 sources:
-  - name: youtube_api_raw
+  - name: youtube_raw
     description: |
-      Raw data từ YouTube Data API v3 được đồng bộ bởi Fivetran.
+      Raw JSON data from YouTube Data API v3 stored in BigQuery.
+      Data is synced by Python crawler (extract/crawlers.py).
       
-      **API Version:** YouTube Data API v3
-      **Connector:** Fivetran YouTube
-      **Sync Frequency:** Có thể cấu hình (mặc định hàng ngày)
-      **FREE QUOTA:** 10,000 units/ngày
-      
-      **Tables in this source:**
-      - dim_video: Video metadata từ videos.list endpoint
-      - dim_channel: Channel metadata từ channels.list endpoint
-      - dim_playlist: Playlist metadata từ playlists.list endpoint
-      
-      **Data Quality Notes:**
-      - Statistics data (views, likes, comments) có thể bị delayed 24-48 giờ
-      - Duration được cung cấp ở định dạng ISO 8601, cần phải parse
-      - Private/unlisted content không khả dụng trong API public
+      **Sync frequency:** Configured per channel in channels.yml (default: daily)
+      **Data format:** JSON/STRUCT columns containing full API responses
+      **Storage:** BigQuery dataset specified by BQ_DATASET_ID env var
     
-    database: "{{ var('youtube_analytics_database', 'your_project') }}"
-    schema: "{{ var('youtube_analytics_schema', 'youtube_raw') }}"
+    database: "{{ env_var('GCP_PROJECT_ID') }}"
+    schema: "{{ env_var('BQ_DATASET_ID', 'raw_yt') }}"
     
     freshness:
-      warn_after: { count: "{{ var('youtube_api_freshness_warn_hours', 12) }}", period: hour }
-      error_after: { count: "{{ var('youtube_api_freshness_error_hours', 24) }}", period: hour }
+      warn_after: { count: 12, period: hour }
+      error_after: { count: 24, period: hour }
     
     loaded_at_field: _crawled_at
     
     tables:
-      - name: dim_video
+      - name: youtube_videos_raw
         description: |
-          Video metadata từ YouTube Data API v3 videos.list endpoint.
-          
-          **API Endpoint:** youtube.videos().list()
-          **Key Parts:** snippet, contentDetails, statistics, status, player
-          
-          **Includes:**
-          - Video metadata (title, description, tags, category)
-          - Statistics (views, likes, comments, favorites)
-          - Content details (duration, captions, definition, dimension)
-          - Status info (privacy, embeddable, madForKids)
-          - Thumbnail URLs
-          
-          **Refresh Cycle:** 
-          - Published metadata: Static after publish
-          - Statistics: Updated every 12-48 hours (API limitation)
-          
-          **Data Quality Issues:**
-          - Like/comment counts may be disabled for some videos
-          - Dislike count is always 0 (hidden by YouTube since 2021)
-          - Some fields are null for certain video types
+          Raw video data from YouTube Data API v3 videos.list() endpoint.
+          Each row contains full JSON response in 'data' column.
         
         columns:
           - name: id
-            description: Unique video ID (Primary Key)
+            description: Video ID (Primary Key)
             tests:
               - unique
               - not_null
           
-          - name: snippet_channel_id
-            description: Channel ID that published the video
+          - name: channel_id
+            description: Channel ID (denormalized for filtering)
             tests:
               - not_null
           
-          - name: snippet_title
-            description: Video title
-          
-          - name: snippet_description
-            description: Video description (HTML-escaped)
-          
-          - name: snippet_published_at
-            description: ISO 8601 timestamp when video was published
-          
-          - name: snippet_tags
-            description: Array of tags (ARRAY<STRING>)
-          
-          - name: snippet_category_id
-            description: YouTube category ID (e.g., "10" = Music, "20" = Gaming)
-          
-          - name: snippet_default_language
-            description: Primary language code (e.g., "vi", "en")
-          
-          - name: snippet_channel_title
-            description: Channel title/name
-          
-          - name: snippet_live_broadcast_content
-            description: Livestream status (none, live, upcoming)
-          
-          - name: statistics_view_count
-            description: Total view count (INT64)
-          
-          - name: statistics_like_count
+          - name: data
             description: |
-              Total likes (may be NULL if disabled by creator)
-              Always 0 or NULL due to YouTube API limitations
-          
-          - name: statistics_comment_count
-            description: |
-              Total comments (may be NULL if comments disabled)
-          
-          - name: content_details_duration
-            description: ISO 8601 duration (e.g., "PT1H23M45S")
-          
-          - name: content_details_caption
-            description: Boolean - whether video has captions
-          
-          - name: content_details_definition
-            description: Video definition (sd, hd)
-          
-          - name: privacy_status
-            description: Video privacy (public, private, unlisted)
-          
-          - name: status_embeddable
-            description: Whether video can be embedded
-          
-          - name: status_made_for_kids
-            description: COPPA compliance flag
+              STRUCT/JSON column containing full API response with:
+              - data.snippet: title, description, tags, publishedAt, categoryId
+              - data.statistics: viewCount, likeCount, commentCount
+              - data.contentDetails: duration (ISO 8601), caption, definition
+              - data.status: privacyStatus, embeddable, madeForKids
           
           - name: _crawled_at
-            description: Timestamp when Fivetran synced this record
+            description: Timestamp when data was crawled
             tests:
               - not_null
 
-      - name: dim_channel
+      - name: youtube_channels_raw
         description: |
-          Channel metadata từ YouTube Data API v3 channels.list endpoint.
-          
-          **API Endpoint:** youtube.channels().list()
-          **Key Parts:** snippet, statistics, contentDetails, topicDetails
-          
-          **Includes:**
-          - Channel metadata (title, description, country)
-          - Statistics (subscribers, views, videoCount)
-          - Topic IDs for content categorization
-          - Uploads playlist ID for automated video extraction
-          
-          **Refresh Cycle:** Updated by Fivetran (configurable, typically daily)
-          
-          **Data Quality Notes:**
-          - Subscriber count may be hidden by creator
-          - Topics are YouTube's internal categorization
-          - uploadPlaylistId is essential for fetching all channel videos
+          Raw channel data from YouTube Data API v3 channels.list() endpoint.
         
         columns:
           - name: id
-            description: Unique channel ID (Primary Key)
+            description: Channel ID (Primary Key)
             tests:
               - unique
               - not_null
           
-          - name: snippet_title
-            description: Channel title/name
-          
-          - name: snippet_published_at
-            description: ISO 8601 timestamp of channel creation
-          
-          - name: snippet_country
-            description: Country code (e.g., "VN", "US")
-          
-          - name: snippet_description
-            description: Channel bio/description
-          
-          - name: statistics_subscriber_count
+          - name: data
             description: |
-              Subscriber count (may be NULL if hidden)
-          
-          - name: statistics_view_count
-            description: Cumulative total views across all videos
-          
-          - name: statistics_video_count
-            description: Total count of public videos
-          
-          - name: statistics_hidden_subscriber_count
-            description: |
-              Boolean - whether subscriber count is hidden from public
-          
-          - name: topic_details_topic_ids
-            description: |
-              Array of YouTube topic IDs (e.g., "/m/04rlf" = Music)
-              Used for content categorization
-          
-          - name: content_details_uploads
-            description: |
-              Playlist ID of the "Uploads" playlist
-              Contains all videos uploaded to the channel
+              STRUCT/JSON column containing:
+              - data.snippet: title, publishedAt, country
+              - data.statistics: subscriberCount, viewCount, videoCount
+              - data.contentDetails.relatedPlaylists.uploads: Uploads playlist ID
+              - data.topicDetails.topicIds: Topic categorization
           
           - name: _crawled_at
-            description: Timestamp when Fivetran synced this record
+            description: Timestamp when data was crawled
             tests:
               - not_null
 
-      - name: dim_playlist
+      - name: youtube_playlists_raw
         description: |
-          Playlist metadata từ YouTube Data API v3 playlists.list endpoint.
-          
-          **API Endpoint:** youtube.playlists().list()
-          **Key Parts:** snippet, contentDetails, status
-          
-          **Includes:**
-          - Playlist metadata (title, description)
-          - Item count for playlist size
-          - Privacy status
-          
-          **Refresh Cycle:** Updated by Fivetran (configurable, typically daily)
-          
-          **Data Quality Notes:**
-          - Only public playlists are accessible via API
-          - Private playlists owned by authenticated users are not included
-          - Item count is set by playlist.contentDetails.itemCount
+          Raw playlist data from YouTube Data API v3 playlists.list() endpoint.
         
         columns:
           - name: id
-            description: Unique playlist ID (Primary Key)
+            description: Playlist ID (Primary Key)
             tests:
               - unique
               - not_null
           
-          - name: snippet_channel_id
-            description: Channel ID that owns this playlist
+          - name: channel_id
+            description: Channel ID that owns the playlist
             tests:
               - not_null
           
-          - name: snippet_title
-            description: Playlist title/name
-          
-          - name: snippet_published_at
-            description: ISO 8601 timestamp of playlist creation
-          
-          - name: snippet_description
-            description: Playlist description
-          
-          - name: content_details_item_count
-            description: Number of videos in the playlist
-          
-          - name: privacy_status
-            description: Playlist privacy (public, private, unlisted)
+          - name: data
+            description: |
+              STRUCT/JSON column containing:
+              - data.snippet: title, publishedAt
+              - data.contentDetails.itemCount: Number of videos
+              - data.status.privacyStatus: public/private/unlisted
           
           - name: _crawled_at
-            description: Timestamp when Fivetran synced this record
+            description: Timestamp when data was crawled
+            tests:
+              - not_null
+
+      - name: youtube_comments_raw
+        description: |
+          Raw comments data from YouTube Data API v3 commentThreads.list() endpoint.
+          Only present if include_comments=true in channels.yml
+        
+        columns:
+          - name: id
+            description: Comment thread ID (Primary Key)
+            tests:
+              - unique
+              - not_null
+          
+          - name: video_id
+            description: Video ID the comment belongs to
+            tests:
+              - not_null
+          
+          - name: channel_id
+            description: Channel ID (for filtering)
+            tests:
+              - not_null
+          
+          - name: data
+            description: |
+              STRUCT/JSON column containing:
+              - data.snippet.topLevelComment.snippet: authorDisplayName, textDisplay, likeCount, publishedAt
+              - data.snippet.totalReplyCount: Number of replies
+          
+          - name: _crawled_at
+            description: Timestamp when data was crawled
             tests:
               - not_null
