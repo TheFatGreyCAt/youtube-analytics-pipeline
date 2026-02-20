@@ -1,7 +1,6 @@
 {{
     config(
-        materialized='view',
-        schema='intermediate'
+        materialized='view'
     )
 }}
 
@@ -25,9 +24,20 @@ metrics as (
         channel_subscribers,
         country_code,
         
-        safe_divide(like_count, view_count) * 100 as like_rate_pct,
-        safe_divide(comment_count, view_count) * 100 as comment_rate_pct,
-        safe_divide((like_count + comment_count * 2), view_count) * 100 as engagement_score,
+        case 
+            when view_count > 0 then safe_divide(like_count, view_count) * 100 
+            else 0 
+        end as like_rate_pct,
+        
+        case 
+            when view_count > 0 then safe_divide(comment_count, view_count) * 100 
+            else 0 
+        end as comment_rate_pct,
+        
+        case 
+            when view_count > 0 then safe_divide((like_count + comment_count * 2), view_count) * 100 
+            else 0 
+        end as engagement_score,
         
         safe_divide(view_count, nullif(days_since_published, 0)) as avg_views_per_day,
         

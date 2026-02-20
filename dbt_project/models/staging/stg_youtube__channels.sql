@@ -1,34 +1,33 @@
 {{
     config(
-        materialized='view',
-        schema='staging'
+        materialized='view'
     )
 }}
 
 with source as (
-    select * from {{ source('youtube_raw', 'youtube_channels_raw') }}
+    select * from {{ source('youtube_raw', 'raw_channels') }}
 ),
 
 flattened as (
     select
         id as channel_id,
         
-        data.snippet.title as channel_name,
-        data.snippet.description as description,
-        cast(data.snippet.publishedAt as timestamp) as channel_created_at,
-        data.snippet.country as country_code,
-        data.snippet.customUrl as custom_url,
+        json_extract_scalar(raw, '$.items[0].snippet.title') as channel_name,
+        json_extract_scalar(raw, '$.items[0].snippet.description') as description,
+        cast(json_extract_scalar(raw, '$.items[0].snippet.publishedAt') as timestamp) as channel_created_at,
+        json_extract_scalar(raw, '$.items[0].snippet.country') as country_code,
+        json_extract_scalar(raw, '$.items[0].snippet.customUrl') as custom_url,
         
-        cast(data.statistics.subscriberCount as int64) as subscriber_count,
-        cast(data.statistics.viewCount as int64) as total_view_count,
-        cast(data.statistics.videoCount as int64) as video_count,
-        cast(data.statistics.hiddenSubscriberCount as bool) as has_hidden_subscribers,
+        cast(json_extract_scalar(raw, '$.items[0].statistics.subscriberCount') as int64) as subscriber_count,
+        cast(json_extract_scalar(raw, '$.items[0].statistics.viewCount') as int64) as total_view_count,
+        cast(json_extract_scalar(raw, '$.items[0].statistics.videoCount') as int64) as video_count,
+        cast(json_extract_scalar(raw, '$.items[0].statistics.hiddenSubscriberCount') as bool) as has_hidden_subscribers,
         
-        data.contentDetails.relatedPlaylists.uploads as uploads_playlist_id,
+        json_extract_scalar(raw, '$.items[0].contentDetails.relatedPlaylists.uploads') as uploads_playlist_id,
         
-        data.topicDetails.topicIds as topic_ids,
+        json_extract_array(raw, '$.items[0].topicDetails.topicIds') as topic_ids,
         
-        _crawled_at as crawled_at,
+        cast(ingestion_time as timestamp) as crawled_at,
         current_timestamp() as dbt_loaded_at
         
         {{ get_passthrough_columns('youtube__channel_passthrough_columns') }}

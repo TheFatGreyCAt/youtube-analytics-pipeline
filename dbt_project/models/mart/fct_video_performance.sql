@@ -3,19 +3,12 @@
         materialized='incremental',
         unique_key='video_id',
         incremental_strategy='merge',
-        schema='mart',
         partition_by={
             'field': 'published_date',
             'data_type': 'date',
             'granularity': 'day'
         },
-        cluster_by=['channel_id', 'category_id'],
-        merge_update_columns=[
-            'view_count', 'like_count', 'comment_count',
-            'like_rate_pct', 'comment_rate_pct', 'engagement_score',
-            'avg_views_per_day', 'engagement_level', 'is_potentially_viral',
-            'dbt_updated_at'
-        ]
+        cluster_by=['channel_id', 'category_id']
     )
 }}
 
@@ -64,11 +57,8 @@ final as (
     join videos v on m.video_id = v.video_id
     
     {% if is_incremental() %}
-        where v.crawled_at > (select max(crawled_at) from {{ this }})
-           or m.video_id in (
-               select video_id from {{ this }}
-               where dbt_updated_at < current_timestamp() - interval 7 day
-           )
+        -- Update only new data or recently updated videos
+        where v.crawled_at > (select coalesce(max(crawled_at), timestamp('2020-01-01')) from {{ this }})
     {% endif %}
 )
 

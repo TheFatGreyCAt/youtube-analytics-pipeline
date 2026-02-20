@@ -1,12 +1,11 @@
 {{
     config(
-        materialized='view',
-        schema='staging'
+        materialized='view'
     )
 }}
 
 with source as (
-    select * from {{ source('youtube_raw', 'youtube_playlists_raw') }}
+    select * from {{ source('youtube_raw', 'raw_playlists') }}
 ),
 
 flattened as (
@@ -16,22 +15,22 @@ flattened as (
         channel_id,
         
         -- Snippet fields
-        data.snippet.title as playlist_name,
-        data.snippet.description as description,
-        cast(data.snippet.publishedAt as timestamp) as created_at,
+        json_extract_scalar(raw, '$.snippet.title') as playlist_name,
+        json_extract_scalar(raw, '$.snippet.description') as description,
+        cast(json_extract_scalar(raw, '$.snippet.publishedAt') as timestamp) as created_at,
         
         -- Content Details
-        cast(data.contentDetails.itemCount as int64) as item_count,
+        cast(json_extract_scalar(raw, '$.contentDetails.itemCount') as int64) as item_count,
         
         -- Status
-        data.status.privacyStatus as privacy_status,
+        json_extract_scalar(raw, '$.status.privacyStatus') as privacy_status,
         
         -- Metadata
-        _crawled_at as crawled_at,
+        cast(ingestion_time as timestamp) as crawled_at,
         current_timestamp() as dbt_loaded_at
         
     from source
-    where data.status.privacyStatus = 'public'  -- Only public playlists
+    where json_extract_scalar(raw, '$.status.privacyStatus') = 'public'  -- Only public playlists
 )
 
 select * from flattened

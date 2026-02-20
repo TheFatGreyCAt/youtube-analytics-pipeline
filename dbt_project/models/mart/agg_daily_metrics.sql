@@ -2,7 +2,6 @@
     config(
         materialized='incremental',
         unique_key='date_channel_key',
-        schema='mart',
         partition_by={
             'field': 'metric_date',
             'data_type': 'date',
