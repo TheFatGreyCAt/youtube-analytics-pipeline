@@ -32,8 +32,9 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('stg_youtube__channels')
-              field: channel_id
+              arguments:
+                to: ref('stg_youtube__channels')
+                field: channel_id
       
       - name: title
         description: Video title (plain text)
@@ -65,8 +66,9 @@ models:
         tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 0
-              inclusive: true
+              arguments:
+                min_value: 0
+                inclusive: true
       
       - name: like_count
         description: |
@@ -74,8 +76,9 @@ models:
           Note: Can be NULL if creator disabled likes visibility
         tests:
           - dbt_utils.accepted_range:
-              min_value: 0
-              inclusive: true
+              arguments:
+                min_value: 0
+                inclusive: true
       
       - name: comment_count
         description: |
@@ -83,8 +86,9 @@ models:
           Note: Can be NULL if comments disabled
         tests:
           - dbt_utils.accepted_range:
-              min_value: 0
-              inclusive: true
+              arguments:
+                min_value: 0
+                inclusive: true
       
       - name: duration_iso8601
         description: |
@@ -108,7 +112,8 @@ models:
           Values: "public", "private", "unlisted"
         tests:
           - accepted_values:
-              values: ['public']
+              arguments:
+                values: ['public']
       
       - name: is_embeddable
         description: Whether video can be embedded on other websites
@@ -179,21 +184,24 @@ models:
         tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 0
+              arguments:
+                min_value: 0
       
       - name: total_view_count
         description: Total views across all channel videos
         tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 0
+              arguments:
+                min_value: 0
       
       - name: video_count
         description: Total number of public videos on channel
         tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 0
+              arguments:
+                min_value: 0
       
       - name: has_hidden_subscribers
         description: Boolean flag - true if subscriber count is hidden
@@ -242,8 +250,9 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('stg_youtube__channels')
-              field: channel_id
+              arguments:
+                to: ref('stg_youtube__channels')
+                field: channel_id
       
       - name: playlist_name
         description: Playlist title
@@ -263,7 +272,8 @@ models:
         tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 0
+              arguments:
+                min_value: 0
       
       - name: privacy_status
         description: |
@@ -271,7 +281,8 @@ models:
           Values: "public", "private", "unlisted"
         tests:
           - accepted_values:
-              values: ['public']
+              arguments:
+                values: ['public']
       
       - name: crawled_at
         description: Timestamp when data was crawled

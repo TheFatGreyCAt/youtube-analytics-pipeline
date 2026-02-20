@@ -13,17 +13,11 @@ sources:
     database: "{{ env_var('GCP_PROJECT_ID') }}"
     schema: "{{ env_var('BQ_DATASET_ID', 'raw_yt') }}"
     
-    freshness:
-      warn_after: { count: 12, period: hour }
-      error_after: { count: 24, period: hour }
-    
-    loaded_at_field: _crawled_at
-    
     tables:
-      - name: youtube_videos_raw
+      - name: raw_videos
         description: |
           Raw video data from YouTube Data API v3 videos.list() endpoint.
-          Each row contains full JSON response in 'data' column.
+          Each row contains full JSON response in 'raw' column.
         
         columns:
           - name: id
@@ -32,25 +26,20 @@ sources:
               - unique
               - not_null
           
-          - name: channel_id
-            description: Channel ID (denormalized for filtering)
-            tests:
-              - not_null
-          
-          - name: data
+          - name: raw
             description: |
-              STRUCT/JSON column containing full API response with:
-              - data.snippet: title, description, tags, publishedAt, categoryId
-              - data.statistics: viewCount, likeCount, commentCount
-              - data.contentDetails: duration (ISO 8601), caption, definition
-              - data.status: privacyStatus, embeddable, madeForKids
+              JSON string containing full API response with:
+              - snippet: title, description, tags, publishedAt, categoryId
+              - statistics: viewCount, likeCount, commentCount
+              - contentDetails: duration (ISO 8601), caption, definition
+              - status: privacyStatus, embeddable, madeForKids
           
-          - name: _crawled_at
+          - name: ingestion_time
             description: Timestamp when data was crawled
             tests:
               - not_null
 
-      - name: youtube_channels_raw
+      - name: raw_channels
         description: |
           Raw channel data from YouTube Data API v3 channels.list() endpoint.
         
@@ -61,20 +50,20 @@ sources:
               - unique
               - not_null
           
-          - name: data
+          - name: raw
             description: |
-              STRUCT/JSON column containing:
-              - data.snippet: title, publishedAt, country
-              - data.statistics: subscriberCount, viewCount, videoCount
-              - data.contentDetails.relatedPlaylists.uploads: Uploads playlist ID
-              - data.topicDetails.topicIds: Topic categorization
+              JSON string containing:
+              - snippet: title, publishedAt, country
+              - statistics: subscriberCount, viewCount, videoCount
+              - contentDetails.relatedPlaylists.uploads: Uploads playlist ID
+              - topicDetails.topicIds: Topic categorization
           
-          - name: _crawled_at
+          - name: ingestion_time
             description: Timestamp when data was crawled
             tests:
               - not_null
 
-      - name: youtube_playlists_raw
+      - name: raw_playlists
         description: |
           Raw playlist data from YouTube Data API v3 playlists.list() endpoint.
         
@@ -90,19 +79,19 @@ sources:
             tests:
               - not_null
           
-          - name: data
+          - name: raw
             description: |
-              STRUCT/JSON column containing:
-              - data.snippet: title, publishedAt
-              - data.contentDetails.itemCount: Number of videos
-              - data.status.privacyStatus: public/private/unlisted
+              JSON string containing:
+              - snippet: title, publishedAt
+              - contentDetails.itemCount: Number of videos
+              - status.privacyStatus: public/private/unlisted
           
-          - name: _crawled_at
+          - name: ingestion_time
             description: Timestamp when data was crawled
             tests:
               - not_null
 
-      - name: youtube_comments_raw
+      - name: raw_comments
         description: |
           Raw comments data from YouTube Data API v3 commentThreads.list() endpoint.
           Only present if include_comments=true in channels.yml
@@ -124,13 +113,13 @@ sources:
             tests:
               - not_null
           
-          - name: data
+          - name: raw
             description: |
-              STRUCT/JSON column containing:
-              - data.snippet.topLevelComment.snippet: authorDisplayName, textDisplay, likeCount, publishedAt
-              - data.snippet.totalReplyCount: Number of replies
+              JSON string containing:
+              - snippet.topLevelComment.snippet: authorDisplayName, textDisplay, likeCount, publishedAt
+              - snippet.totalReplyCount: Number of replies
           
-          - name: _crawled_at
+          - name: ingestion_time
             description: Timestamp when data was crawled
             tests:
               - not_null

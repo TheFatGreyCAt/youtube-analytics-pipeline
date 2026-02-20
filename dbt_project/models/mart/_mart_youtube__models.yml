@@ -30,7 +30,8 @@ models:
         tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 1
+              arguments:
+                min_value: 1
 
   - name: agg_daily_metrics
     description: Daily aggregated metrics per channel

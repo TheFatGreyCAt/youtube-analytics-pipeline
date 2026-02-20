@@ -15,12 +15,14 @@ models:
         tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 0
-              max_value: 86400
+              arguments:
+                min_value: 0
+                max_value: 86400
       - name: video_length_category
         tests:
           - accepted_values:
-              values: ['shorts', 'short', 'medium', 'long']
+              arguments:
+                values: ['shorts', 'short', 'medium', 'long']
 
   - name: int_engagement_metrics
     description: Calculated engagement metrics per video
@@ -35,7 +37,8 @@ models:
       - name: engagement_level
         tests:
           - accepted_values:
-              values: ['high', 'medium', 'low']
+              arguments:
+                values: ['high', 'medium', 'low']
 
   - name: int_channel_summary
     description: Aggregated channel-level statistics
