@@ -1,0 +1,89 @@
+services:
+  postgres:
+    image: postgres:14
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DATABASE}
+    volumes: 
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck: 
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    
+  # pgadmin:
+  #   image: dpage/pgadmin4:9.8
+  #   ports:
+  #     - 5050:80
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+  #     PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+  #     PGADMIN_CONFIG_SERVER_MODE: 'False'
+  #     PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+
+  redis: 
+    image: redis:7
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      
+  prefect-server: 
+    image: prefecthq/prefect:3-latest 
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://${PG_USER}:${PG_PASSWORD}@postgres:5432/${PG_DATABASE}
+      PREFECT_SERVER_API_HOST: 0.0.0.0
+      PREFECT_MESSAGING_BROKER: prefect_redis.messaging
+      PREFECT_MESSAGING_CACHE: prefect_redis.messaging
+      PREFECT_REDIS_MESSAGING_HOST: redis
+      PREFECT_REDIS_MESSAGING_PORT: 6379
+      PREFECT_REDIS_MESSAGING_DB: 0
+    command: prefect server start --no-services
+    ports:
+      - "${PREFECT_SERVER_PORT:-4200}:4200"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:4200/api/health', timeout=1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  prefect-services:
+    image: prefecthq/prefect:3-latest
+    depends_on:
+      prefect-server:
+        condition: service_healthy
+    environment:
+      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://${PG_USER}:${PG_PASSWORD}@postgres:5432/${PG_DATABASE}
+      PREFECT_MESSAGING_BROKER: prefect_redis.messaging
+      PREFECT_MESSAGING_CACHE: prefect_redis.messaging
+      PREFECT_REDIS_MESSAGING_HOST: redis
+      PREFECT_REDIS_MESSAGING_PORT: 6379
+      PREFECT_REDIS_MESSAGING_DB: 0
+    command: prefect server services start
+
+  prefect-worker:
+    image: prefecthq/prefect:3-latest
+    depends_on:
+      prefect-server:
+        condition: service_healthy
+    environment:
+      PREFECT_API_URL: ${PREFECT_API_URL:-http://prefect-server:4200/api}
+    command: prefect worker start --pool local-pool
+    restart: on-failure
+
+volumes:
+  postgres_data:
+  redis_data:

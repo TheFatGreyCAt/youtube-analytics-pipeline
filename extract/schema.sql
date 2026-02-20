@@ -1,48 +1,48 @@
 CREATE OR REPLACE TABLE `{PROJECT_ID}.{DATASET_ID}.fact_videos` (
-  video_id STRING NOT NULL,           -- PK: YouTube video ID
-  channel_id STRING NOT NULL,         -- FK: Channel reference
-  published_at TIMESTAMP,             -- Feature: Publication time (time series)
-  view_count INT64,                   -- Target KPI #1: View performance
-  like_count INT64,                   -- Target: Engagement metric
-  comment_count INT64,                -- Target: Community engagement
-  duration_seconds INT64,             -- Feature: Video length for ML
-  category_id INT64,                  -- Feature: One-hot encoding for ML
-  title_length INT64,                 -- Feature: Content characteristics
-  engagement_rate FLOAT64,            -- Feature: KPI #2 (likes+comments)/views
-  title STRING,                       -- Reference: Video title
-  ingestion_time TIMESTAMP            -- Audit: When data was loaded
+  video_id STRING NOT NULL,
+  channel_id STRING NOT NULL,
+  published_at TIMESTAMP,
+  view_count INT64,
+  like_count INT64,
+  comment_count INT64,
+  duration_seconds INT64,
+  category_id INT64,
+  title_length INT64,
+  engagement_rate FLOAT64,
+  title STRING,
+  ingestion_time TIMESTAMP
 )
 PARTITION BY DATE(published_at)
 CLUSTER BY channel_id, category_id;
 
 CREATE OR REPLACE TABLE `{PROJECT_ID}.{DATASET_ID}.dim_channels` (
-  channel_id STRING NOT NULL,         -- PK: YouTube channel ID
-  title STRING,                       -- Branding: Channel name (embedding input)
-  subscriber_count INT64,             -- KPI #1: Growth metric
-  country STRING,                     -- Feature: Geo-mapping, one-hot encoding
-  published_at TIMESTAMP,             -- Feature: Channel age
-  ingestion_time TIMESTAMP            -- Audit: When data was loaded
+  channel_id STRING NOT NULL,
+  title STRING,
+  subscriber_count INT64,
+  country STRING,
+  published_at TIMESTAMP,
+  ingestion_time TIMESTAMP
 )
 CLUSTER BY country;
 
 CREATE OR REPLACE TABLE `{PROJECT_ID}.{DATASET_ID}.raw_videos` (
   id STRING NOT NULL,
-  raw STRING NOT NULL,                -- Full API response as JSON
+  raw STRING NOT NULL,
   ingestion_time TIMESTAMP
 )
 PARTITION BY DATE(ingestion_time);
 
 CREATE OR REPLACE TABLE `{PROJECT_ID}.{DATASET_ID}.raw_channels` (
   id STRING NOT NULL,
-  raw STRING NOT NULL,                -- Full API response as JSON
+  raw STRING NOT NULL,
   ingestion_time TIMESTAMP
 )
 PARTITION BY DATE(ingestion_time);
 
 CREATE OR REPLACE TABLE `{PROJECT_ID}.{DATASET_ID}.raw_playlists` (
   id STRING NOT NULL,
-  channel_id STRING NOT NULL,         -- FK: Owner channel
-  raw STRING NOT NULL,                -- Full API response as JSON
+  channel_id STRING NOT NULL,
+  raw STRING NOT NULL,
   ingestion_time TIMESTAMP
 )
 PARTITION BY DATE(ingestion_time)
@@ -50,9 +50,9 @@ CLUSTER BY channel_id;
 
 CREATE OR REPLACE TABLE `{PROJECT_ID}.{DATASET_ID}.raw_comments` (
   id STRING NOT NULL,
-  video_id STRING NOT NULL,           -- FK: Parent video
-  channel_id STRING NOT NULL,         -- FK: Video owner channel
-  raw STRING NOT NULL,                -- Full API response as JSON
+  video_id STRING NOT NULL,
+  channel_id STRING NOT NULL,
+  raw STRING NOT NULL,
   ingestion_time TIMESTAMP
 )
 PARTITION BY DATE(ingestion_time)

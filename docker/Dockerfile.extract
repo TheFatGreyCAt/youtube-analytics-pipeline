@@ -1,0 +1,25 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY extract/requirements.txt /app/extract/requirements.txt
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r extract/requirements.txt
+
+# Copy extract module
+COPY extract/ /app/extract/
+COPY .env /app/.env
+COPY credentials/ /app/credentials/
+
+# Set Python path
+ENV PYTHONPATH=/app
+
+# Default command: run daily crawl
+CMD ["python", "-m", "extract.cli", "crawl", "--limit", "10"]

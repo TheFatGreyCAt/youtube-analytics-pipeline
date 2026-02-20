@@ -1,6 +1,3 @@
-"""
-CLI - Command Line Interface for extract module
-"""
 import sys
 import argparse
 import logging
@@ -14,7 +11,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 
 def setup_database():
-    """Setup both PostgreSQL and BigQuery databases"""
     print("Setting up databases...")
     
     pg_manager = PostgresManager()
@@ -27,12 +23,10 @@ def setup_database():
 
 
 def list_channels_from_file():
-    """List channels from channels.yml file"""
     channels = get_active_channels()
     
     if not channels:
         print(f"\nNo channels found in {CHANNELS_CONFIG_PATH}")
-        print(f"Please edit {CHANNELS_CONFIG_PATH} to add channels")
         return
     
     print("\n" + "="*100)
@@ -55,14 +49,12 @@ def list_channels_from_file():
 
 
 def add_channel(channel_id: str, channel_name: str, frequency_hours: int = 24):
-    """Add a new channel to crawl"""
     pg_manager = PostgresManager()
     pg_manager.add_channel(channel_id, channel_name, frequency_hours)
     print(f"Added channel: {channel_name} ({channel_id})")
 
 
 def list_channels():
-    """List all configured channels"""
     pg_manager = PostgresManager()
     channels = pg_manager.list_channels()
     
@@ -86,14 +78,12 @@ def list_channels():
 
 
 def remove_channel(channel_id: str):
-    """Remove a channel from config"""
     pg_manager = PostgresManager()
     pg_manager.remove_channel(channel_id)
     print(f"Removed channel: {channel_id}")
 
 
 def view_history(channel_id: Optional[str] = None, limit: int = 10):
-    """View crawl history"""
     pg_manager = PostgresManager()
     logs = pg_manager.get_crawl_history(channel_id, limit)
     
@@ -116,7 +106,6 @@ def view_history(channel_id: Optional[str] = None, limit: int = 10):
 
 
 def crawl_now(channel_id: Optional[str] = None, limit: int = 10, with_comments: bool = False):
-    """Run crawl immediately"""
     if channel_id:
         print(f"Crawling channel: {channel_id}")
         crawler = YouTubeCrawler()
@@ -129,7 +118,6 @@ def crawl_now(channel_id: Optional[str] = None, limit: int = 10, with_comments: 
 
 
 def crawl_from_file(limit: int = None):
-    """Run crawl from channels.yml file"""
     print(f"Running crawl from {CHANNELS_CONFIG_PATH}")
     if limit:
         print(f"Limit: {limit} channel(s)")

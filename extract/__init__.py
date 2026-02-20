@@ -1,5 +1,5 @@
 """
-Extract Module - YouTube Data Extraction Pipeline
+Extract Module
 """
 from .config import validate_config
 from .db_manager import PostgresManager, BigQueryManager
