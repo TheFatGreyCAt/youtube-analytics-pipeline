@@ -24,13 +24,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 
 class PostgresManager:
-    """Manage PostgreSQL operations - Metadata & Orchestration Only"""
     
     def __init__(self, conn_str: Optional[str] = None):
         self.conn_str = conn_str or PG_CONN_STR
     
     def setup_tables(self):
-        """Create PostgreSQL metadata tables from schema_postgres.sql"""
         conn = psycopg2.connect(self.conn_str)
         cur = conn.cursor()
         
@@ -57,8 +55,37 @@ class PostgresManager:
         conn.close()
         logging.info("PostgreSQL setup completed")
     
+    def check_channel_exists(self, channel_id: str) -> bool:
+        conn = psycopg2.connect(self.conn_str)
+        cur = conn.cursor()
+        
+        cur.execute("SELECT 1 FROM channels_config WHERE channel_id = %s", (channel_id,))
+        exists = cur.fetchone() is not None
+        
+        cur.close()
+        conn.close()
+        return exists
+    
+    def get_existing_channels(self, channel_ids: List[str]) -> set:
+
+        if not channel_ids:
+            return set()
+        
+        conn = psycopg2.connect(self.conn_str)
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT channel_id FROM channels_config 
+            WHERE channel_id = ANY(%s)
+        """, (channel_ids,))
+        
+        existing = {row[0] for row in cur.fetchall()}
+        cur.close()
+        conn.close()
+        
+        return existing
+    
     def add_channel(self, channel_id: str, channel_name: str, frequency_hours: int = 24):
-        """Add or update a channel in the config"""
         conn = psycopg2.connect(self.conn_str)
         cur = conn.cursor()
         
@@ -76,8 +103,30 @@ class PostgresManager:
         conn.close()
         logging.info(f"Added/Updated channel: {channel_name} ({channel_id})")
     
+    def add_channels_batch(self, channels: List[Tuple[str, str, int]]):
+        if not channels:
+            return
+        
+        conn = psycopg2.connect(self.conn_str)
+        cur = conn.cursor()
+        
+        from psycopg2.extras import execute_values
+        
+        execute_values(cur, """
+            INSERT INTO channels_config (channel_id, channel_name, crawl_frequency_hours, next_crawl_ts)
+            VALUES %s
+            ON CONFLICT (channel_id) 
+            DO UPDATE SET channel_name = EXCLUDED.channel_name, 
+                          crawl_frequency_hours = EXCLUDED.crawl_frequency_hours,
+                          updated_at = NOW()
+        """, channels, template="(%s, %s, %s, NOW())")
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        logging.info(f"Batch added/updated {len(channels)} channels")
+    
     def get_channels_to_crawl(self, limit: int = 10) -> List[str]:
-        """Get list of channels that need to be crawled"""
         conn = psycopg2.connect(self.conn_str)
         cur = conn.cursor()
         
@@ -98,7 +147,6 @@ class PostgresManager:
         return channels
     
     def list_channels(self) -> List[Tuple]:
-        """List all configured channels"""
         conn = psycopg2.connect(self.conn_str)
         cur = conn.cursor()
         
@@ -116,7 +164,6 @@ class PostgresManager:
         return channels
     
     def update_crawl_success(self, channel_id: str, records_count: int, execution_time: float = 0):
-        """Update channel status after successful crawl"""
         conn = psycopg2.connect(self.conn_str)
         cur = conn.cursor()
         
@@ -139,7 +186,6 @@ class PostgresManager:
         conn.close()
     
     def update_crawl_failed(self, channel_id: str, error_msg: str):
-        """Update channel status after failed crawl"""
         conn = psycopg2.connect(self.conn_str)
         cur = conn.cursor()
         
@@ -161,7 +207,6 @@ class PostgresManager:
         conn.close()
     
     def get_crawl_history(self, channel_id: Optional[str] = None, limit: int = 10) -> List[Tuple]:
-        """Get crawl history logs"""
         conn = psycopg2.connect(self.conn_str)
         cur = conn.cursor()
         
@@ -188,7 +233,6 @@ class PostgresManager:
         return logs
     
     def remove_channel(self, channel_id: str):
-        """Remove a channel from config"""
         conn = psycopg2.connect(self.conn_str)
         cur = conn.cursor()
         
@@ -200,7 +244,6 @@ class PostgresManager:
         logging.info(f"Removed channel: {channel_id}")
     
     def update_api_quota(self, quota_used: int):
-        """Update daily API quota usage"""
         conn = psycopg2.connect(self.conn_str)
         cur = conn.cursor()
         
@@ -217,7 +260,6 @@ class PostgresManager:
         conn.close()
     
     def get_api_quota_status(self) -> Dict:
-        """Get current API quota status"""
         conn = psycopg2.connect(self.conn_str)
         cur = conn.cursor()
         
@@ -242,8 +284,6 @@ class PostgresManager:
 
 
 class BigQueryManager:
-    """Manage BigQuery operations - Data Warehouse (ALL YouTube data)"""
-    
     def __init__(self, project_id: Optional[str] = None, dataset_id: Optional[str] = None):
         self.project_id = project_id or GCP_PROJECT_ID
         self.dataset_id = dataset_id or BQ_DATASET_ID
@@ -255,7 +295,6 @@ class BigQueryManager:
             self.client = bigquery.Client(project=self.project_id)
     
     def setup_tables(self):
-        """Create BigQuery dataset and tables from schema.sql"""
         dataset_full_id = f"{self.project_id}.{self.dataset_id}"
         dataset = bigquery.Dataset(dataset_full_id)
         dataset.location = "asia-southeast1"
@@ -287,14 +326,65 @@ class BigQueryManager:
         
         logging.info("BigQuery setup completed")
     
-    def insert_raw_data(self, table_name: str, rows: List[Dict]):
+    def get_existing_records(self, table_name: str, ids: List[str]) -> set:
+        if not ids:
+            return set()
+        
+        table_id = f"{self.project_id}.{self.dataset_id}.{table_name}"
+        
+        query = f"""
+            SELECT id FROM `{table_id}`
+            WHERE id IN UNNEST(@ids)
         """
-        Insert raw JSON data into BigQuery table using Load Jobs from file
-        Free tier compatible - batch operation only
-        """
+        
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ArrayQueryParameter("ids", "STRING", ids)
+            ]
+        )
+        
+        try:
+            query_job = self.client.query(query, job_config=job_config)
+            results = query_job.result()
+            existing = {row.id for row in results}
+            
+            logging.info(f"Found {len(existing)}/{len(ids)} existing records in {table_name}")
+            return existing
+        except Exception as e:
+            logging.warning(f"Error checking existing records in {table_name}: {e}")
+            return set()
+    
+    def filter_new_records(self, table_name: str, rows: List[Dict]) -> List[Dict]:
+        if not rows:
+            return []
+        
+        ids = [row.get('id') for row in rows if row.get('id')]
+        
+        if not ids:
+            return rows
+        
+        existing_ids = self.get_existing_records(table_name, ids)
+        
+        new_rows = [row for row in rows if row.get('id') not in existing_ids]
+        
+        skipped = len(rows) - len(new_rows)
+        if skipped > 0:
+            logging.info(f"Skipped {skipped} duplicate records, inserting {len(new_rows)} new records")
+        
+        return new_rows
+    
+    def insert_raw_data(self, table_name: str, rows: List[Dict], check_duplicates: bool = True):
+
         if not rows:
             logging.warning(f"No rows to insert into {table_name}")
             return
+        
+        if check_duplicates:
+            rows = self.filter_new_records(table_name, rows)
+            
+            if not rows:
+                logging.info(f"All records already exist in {table_name}, nothing to insert")
+                return
         
         table_id = f"{self.project_id}.{self.dataset_id}.{table_name}"
         
@@ -324,7 +414,7 @@ class BigQueryManager:
                 logging.error(f"Load job errors: {load_job.errors}")
                 raise Exception(f"Load job failed with errors: {load_job.errors}")
             
-            logging.info(f"Loaded {len(rows)} rows into {table_name} (batch file upload)")
+            logging.info(f"✓ Loaded {len(rows)} rows into {table_name}")
             
         except Exception as e:
             logging.error(f"Error loading into {table_name}: {e}")
@@ -338,17 +428,15 @@ class BigQueryManager:
             except:
                 pass
     
-    def insert_channel_raw(self, channel_id: str, api_response: Dict):
-        """Insert raw channel data"""
+    def insert_channel_raw(self, channel_id: str, api_response: Dict, check_duplicates: bool = True):
         row = {
             'id': channel_id,
             'raw': json.dumps(api_response),
             'ingestion_time': datetime.utcnow().isoformat()
         }
-        self.insert_raw_data('raw_channels', [row])
+        self.insert_raw_data('raw_channels', [row], check_duplicates=check_duplicates)
     
-    def insert_videos_raw(self, videos: List[Dict]):
-        """Insert raw videos data (batch)"""
+    def insert_videos_raw(self, videos: List[Dict], check_duplicates: bool = True):
         rows = []
         for video in videos:
             video_id = video.get('id', {}).get('videoId') if isinstance(video.get('id'), dict) else video.get('id', '')
@@ -360,10 +448,9 @@ class BigQueryManager:
                 })
         
         if rows:
-            self.insert_raw_data('raw_videos', rows)
+            self.insert_raw_data('raw_videos', rows, check_duplicates=check_duplicates)
     
-    def insert_playlists_raw(self, channel_id: str, playlists: List[Dict]):
-        """Insert raw playlists data"""
+    def insert_playlists_raw(self, channel_id: str, playlists: List[Dict], check_duplicates: bool = True):
         rows = []
         for playlist in playlists:
             playlist_id = playlist.get('id', '')
@@ -376,10 +463,9 @@ class BigQueryManager:
                 })
         
         if rows:
-            self.insert_raw_data('raw_playlists', rows)
+            self.insert_raw_data('raw_playlists', rows, check_duplicates=check_duplicates)
     
-    def insert_comments_raw(self, video_id: str, channel_id: str, comments: List[Dict]):
-        """Insert raw comments data"""
+    def insert_comments_raw(self, video_id: str, channel_id: str, comments: List[Dict], check_duplicates: bool = True):
         rows = []
         for comment in comments:
             comment_id = comment.get('id', '')
@@ -393,4 +479,4 @@ class BigQueryManager:
                 })
         
         if rows:
-            self.insert_raw_data('raw_comments', rows)
+            self.insert_raw_data('raw_comments', rows, check_duplicates=check_duplicates)

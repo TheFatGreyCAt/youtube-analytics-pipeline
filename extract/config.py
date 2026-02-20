@@ -33,7 +33,6 @@ PG_CONN_STR = os.getenv('PG_CONN_STR') or f"postgresql://{PG_USER}:{PG_PASSWORD}
 CHANNELS_CONFIG_PATH = project_root / 'channels.yml'
 
 def load_channels_config():
-    """Load channels configuration from YAML file"""
     if not CHANNELS_CONFIG_PATH.exists():
         return {'channels': [], 'settings': {}}
     
@@ -43,7 +42,6 @@ def load_channels_config():
     return config or {'channels': [], 'settings': {}}
 
 def get_active_channels():
-    """Get list of active channels from config file"""
     config = load_channels_config()
     channels = config.get('channels', [])
     
@@ -54,7 +52,6 @@ def get_active_channels():
     return active
 
 def get_crawl_settings():
-    """Get crawl settings from config file"""
     config = load_channels_config()
     default_settings = {
         'max_videos_per_channel': 50,
@@ -68,7 +65,6 @@ def get_crawl_settings():
 
 # Validate required configs
 def validate_config():
-    """Validate all required configurations are present"""
     required = {
         'YOUTUBE_API_KEY': YOUTUBE_API_KEY,
         'GCP_PROJECT_ID': GCP_PROJECT_ID,

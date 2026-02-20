@@ -15,7 +15,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 
 class YouTubeCrawler:
-    """Main crawler for YouTube data - writes to BigQuery Data Warehouse"""
     
     def __init__(self):
         self.youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
@@ -24,7 +23,6 @@ class YouTubeCrawler:
         self.settings = get_crawl_settings()
     
     def crawl_channel(self, channel_id: str) -> Dict:
-        """Crawl channel basic information"""
         try:
             request = self.youtube.channels().list(
                 part='snippet,statistics,contentDetails,status',
@@ -44,7 +42,6 @@ class YouTubeCrawler:
             raise
     
     def crawl_videos(self, channel_id: str, max_results: int = None) -> List[Dict]:
-        """Crawl all videos from a channel"""
         if max_results is None:
             max_results = self.settings.get('max_videos_per_channel', 50)
         
@@ -102,7 +99,6 @@ class YouTubeCrawler:
             raise
     
     def crawl_playlists(self, channel_id: str, max_results: int = 50):
-        """Crawl playlists from a channel"""
         try:
             request = self.youtube.playlists().list(
                 part='snippet,contentDetails,status',
@@ -122,7 +118,6 @@ class YouTubeCrawler:
             raise
     
     def crawl_comments(self, video_id: str, channel_id: str, max_results: int = None):
-        """Crawl comments for a video"""
         if max_results is None:
             max_results = self.settings.get('max_comments_per_video', 100)
         
@@ -148,11 +143,7 @@ class YouTubeCrawler:
                 logging.error(f"Error crawling comments for {video_id}: {e}")
     
     def crawl_channel_full(self, channel_id: str, include_comments: bool = False) -> int:
-        """
-        Full crawl of a channel: basic info, videos, playlists, and optionally comments
-        All data goes to BigQuery Data Warehouse
-        Returns: number of records fetched
-        """
+
         start_time = time.time()
         
         try:
@@ -190,12 +181,7 @@ class YouTubeCrawler:
 
 
 def crawl_from_config_file(limit: int = None):
-    """
-    Crawl channels from channels.yml file
-    
-    Args:
-        limit: Maximum number of channels to crawl
-    """
+
     crawler = YouTubeCrawler()
     channels = get_active_channels()
     
@@ -223,7 +209,6 @@ def crawl_from_config_file(limit: int = None):
 
 
 def crawl_scheduled_channels(limit: int = 10, include_comments: bool = False):
-    """Crawl channels that are scheduled (from PostgreSQL metadata)"""
     crawler = YouTubeCrawler()
     
     channels = crawler.pg_manager.get_channels_to_crawl(limit)
