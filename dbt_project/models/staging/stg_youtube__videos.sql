@@ -12,39 +12,39 @@ flattened as (
     select
         -- Primary Key
         id as video_id,
-        
-        -- Parse JSON and extract fields
-        json_extract_scalar(raw, '$.snippet.channelId') as channel_id,
-        json_extract_scalar(raw, '$.snippet.title') as title,
-        json_extract_scalar(raw, '$.snippet.description') as description,
-        json_extract_array(raw, '$.snippet.tags') as tags,
-        json_extract_scalar(raw, '$.snippet.categoryId') as category_id,
-        json_extract_scalar(raw, '$.snippet.defaultLanguage') as default_language,
-        cast(json_extract_scalar(raw, '$.snippet.publishedAt') as timestamp) as published_at,
-        
-        -- Statistics fields (cast string to numeric, coalesce NULL values)
-        cast(json_extract_scalar(raw, '$.statistics.viewCount') as int64) as view_count,
-        coalesce(cast(json_extract_scalar(raw, '$.statistics.likeCount') as int64), 0) as like_count,
-        coalesce(cast(json_extract_scalar(raw, '$.statistics.commentCount') as int64), 0) as comment_count,
-        
+
+        -- Snippet
+        JSON_VALUE(raw, '$.snippet.channelId')       as channel_id,
+        JSON_VALUE(raw, '$.snippet.title')           as title,
+        JSON_VALUE(raw, '$.snippet.description')     as description,
+        JSON_QUERY(raw, '$.snippet.tags')            as tags,
+        JSON_VALUE(raw, '$.snippet.categoryId')      as category_id,
+        JSON_VALUE(raw, '$.snippet.defaultLanguage') as default_language,
+        TIMESTAMP(JSON_VALUE(raw, '$.snippet.publishedAt')) as published_at,
+
+        -- Statistics
+        CAST(JSON_VALUE(raw, '$.statistics.viewCount')    as INT64)              as view_count,
+        COALESCE(CAST(JSON_VALUE(raw, '$.statistics.likeCount')    as INT64), 0) as like_count,
+        COALESCE(CAST(JSON_VALUE(raw, '$.statistics.commentCount') as INT64), 0) as comment_count,
+
         -- Content Details
-        json_extract_scalar(raw, '$.contentDetails.duration') as duration_iso8601,
-        cast(json_extract_scalar(raw, '$.contentDetails.caption') as bool) as has_caption,
-        json_extract_scalar(raw, '$.contentDetails.definition') as definition,
-        
+        JSON_VALUE(raw, '$.contentDetails.duration')                as duration_iso8601,
+        CAST(JSON_VALUE(raw, '$.contentDetails.caption') as BOOL)   as has_caption,
+        JSON_VALUE(raw, '$.contentDetails.definition')              as definition,
+
         -- Status
-        json_extract_scalar(raw, '$.status.privacyStatus') as privacy_status,
-        cast(json_extract_scalar(raw, '$.status.embeddable') as bool) as is_embeddable,
-        cast(json_extract_scalar(raw, '$.status.madeForKids') as bool) as is_made_for_kids,
-        
+        COALESCE(JSON_VALUE(raw, '$.status.privacyStatus'), 'public') as privacy_status,
+        CAST(JSON_VALUE(raw, '$.status.embeddable')  as BOOL) as is_embeddable,
+        CAST(JSON_VALUE(raw, '$.status.madeForKids') as BOOL) as is_made_for_kids,
+
         -- Metadata
-        cast(ingestion_time as timestamp) as crawled_at,
-        current_timestamp() as dbt_loaded_at
-        
+        CAST(ingestion_time as TIMESTAMP) as crawled_at,
+        CURRENT_TIMESTAMP()               as dbt_loaded_at
+
         {{ get_passthrough_columns('youtube__video_passthrough_columns') }}
-        
+
     from source
-    where json_extract_scalar(raw, '$.status.privacyStatus') = 'public'  -- Only public videos
+    where COALESCE(JSON_VALUE(raw, '$.status.privacyStatus'), 'public') = 'public'
 )
 
 select * from flattened

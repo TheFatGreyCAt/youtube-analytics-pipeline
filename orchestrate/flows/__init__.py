@@ -1,5 +1,5 @@
 from .extract_flow import youtube_extract_flow, single_channel_extract_flow
-from .dbt_flow import dbt_transform_flow
+from .dbt_flow import dbt_transformation_flow
 from .monitoring_flow import (
     system_health_check_flow,
     data_freshness_monitor_flow,
@@ -17,7 +17,7 @@ from .management_flow import (
 __all__ = [
     'youtube_extract_flow',
     'single_channel_extract_flow',
-    'dbt_transform_flow',
+    'dbt_transformation_flow',
     'system_health_check_flow',
     'data_freshness_monitor_flow',
     'api_quota_monitor_flow',

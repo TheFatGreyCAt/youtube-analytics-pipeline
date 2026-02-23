@@ -1,0 +1,112 @@
+channels:
+  - id: UCXuqSBlHAE6Xw-yeJA0Tunw
+    name: Linus Tech Tips
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+    
+  - id: UC4w1YQAJMWOz4qtxinq55LQ
+    name: MKBHD
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+  
+  - id: UCuMJPFqazQI4SofSFEd-5zA
+    name: Cô Ngân TV
+    frequency_hours: 12
+    priority: 2
+    active: true
+    include_comments: true
+    
+  - id: UCJ0-OtVpF0SU9F3RVKz__bg
+    name: Duy Thanh Nguyễn
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCX6OQ3DkcsbYNE6H8uQQuVA
+    name: MrBeast
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCq-Fj5jknLsUf-MWSy4_brA
+    name: Tseries
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCpEhnqL0y41EpW2TvWAHD7Q
+    name: Veritasium
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCBJycsmduvYEL83R_U4JriQ
+    name: Marques Brownlee
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCsooa4yRKGN_zEE8iknghZA
+    name: TEDx Talks
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCsXVk37bltHxD1rDPwtNM8Q
+    name: Kurzgesagt
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UC3KEoMzNz8eYnwBC34RaKCQ
+    name: Vsauce
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCLXo7UDZvByw2ixzpQCufnA
+    name: Vox
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCy0tKL1T7wFoYcxCe0xjN6Q
+    name: Technology Connections
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCRcgy6GzDeccI7dkbbBna3Q
+    name: MEL Science
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UChIs72whgZI9w6d6FhwGGHA
+    name: Fireship
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+settings:
+  max_videos_per_channel: 200
+  max_comments_per_video: 100
+  batch_size: 10
+  retry_failed_after_hours: 1
+  api_delay_seconds: 0.5

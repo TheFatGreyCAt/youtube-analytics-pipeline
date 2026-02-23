@@ -1,8 +1,6 @@
 {{
     config(
-        materialized='incremental',
-        unique_key='video_id',
-        incremental_strategy='merge',
+        materialized='table',
         partition_by={
             'field': 'published_date',
             'data_type': 'date',
@@ -22,22 +20,22 @@ videos as (
 
 final as (
     select
-        m.video_id,
-        m.channel_id,
+        v.video_id,
+        v.channel_id,
         v.category_id,
-        m.title,
-        m.published_at,
-        m.published_date,
+        v.title,
+        v.published_at,
+        v.published_date,
         v.published_year,
         v.published_month,
-        m.channel_name,
-        m.country_code,
-        m.video_length_category,
+        v.channel_name,
+        v.country_code,
+        v.video_length_category,
         v.duration_seconds,
         
-        m.view_count,
-        m.like_count,
-        m.comment_count,
+        v.view_count,
+        v.like_count,
+        v.comment_count,
         m.like_rate_pct,
         m.comment_rate_pct,
         m.engagement_score,
@@ -53,13 +51,8 @@ final as (
         v.crawled_at,
         current_timestamp() as dbt_updated_at
         
-    from metrics m
-    join videos v on m.video_id = v.video_id
-    
-    {% if is_incremental() %}
-        -- Update only new data or recently updated videos
-        where v.crawled_at > (select coalesce(max(crawled_at), timestamp('2020-01-01')) from {{ this }})
-    {% endif %}
+    from videos v
+    left join metrics m on v.video_id = m.video_id
 )
 
 select * from final

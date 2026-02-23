@@ -11,6 +11,10 @@ build/
 venv/
 ENV/
 env/
+*.egg
+.eggs/
+pip-log.txt
+pip-delete-this-directory.txt
 
 # dbt
 dbt_project/target/
@@ -18,6 +22,18 @@ dbt_project/logs/
 dbt_project/dbt_packages/
 dbt_project/dbt_internal_packages/
 dbt_project/.user.yml
+dbt_project/package-lock.yml
+logs/
+*.log
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.dmypy.json
+dmypy.json
 
 # IDEs
 .vscode/
@@ -25,29 +41,52 @@ dbt_project/.user.yml
 *.swp
 *.swo
 *~
+*.code-workspace
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Credentials
+# Credentials & Secrets
 credentials/*.json
 !credentials/.gitkeep
 .env
+.env.local
+.env.*.local
+*.key
+*.pem
 
 # Docker
-*.log
+docker-compose.override.yml
 
 # Jupyter
 .ipynb_checkpoints/
-
-# Prefect
-.prefect/
+*.ipynb
 
 # Database
 *.db
 *.sqlite
+*.sqlite3
 
-#temp
+# Temporary files
 docs/temp/
-logs
+temp/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Project specific
+data/
+outputs/
+.prefect/
+.dbt/

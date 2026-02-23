@@ -1,8 +1,3 @@
-"""
-Database Manager
-PostgreSQL: Metadata & Orchestration only
-BigQuery: Data Warehouse - ALL YouTube data
-"""
 import logging
 import psycopg2
 from pathlib import Path
@@ -32,7 +27,7 @@ class PostgresManager:
         conn = psycopg2.connect(self.conn_str)
         cur = conn.cursor()
         
-        schema_path = Path(__file__).parent / 'schema_postgres.sql'
+        schema_path = Path(__file__).parent / 'schemas' / 'schema_postgres.sql'
         
         if schema_path.exists():
             logging.info("Loading PostgreSQL schema from schema_postgres.sql...")
@@ -67,7 +62,6 @@ class PostgresManager:
         return exists
     
     def get_existing_channels(self, channel_ids: List[str]) -> set:
-
         if not channel_ids:
             return set()
         
@@ -305,12 +299,12 @@ class BigQueryManager:
         except Exception as e:
             logging.warning(f"Dataset creation: {e}")
         
-        schema_path = Path(__file__).parent / 'schema.sql'
+        schema_path = Path(__file__).parent / 'schemas' / 'schema.sql'
         with open(schema_path, 'r', encoding='utf-8') as f:
             schema_sql = f.read()
         
-        schema_sql = schema_sql.replace('{PROJECT_ID}', self.project_id)
-        schema_sql = schema_sql.replace('{DATASET_ID}', self.dataset_id)
+        schema_sql = schema_sql.replace('{PROJECT_ID}', self.project_id or '')
+        schema_sql = schema_sql.replace('{DATASET_ID}', self.dataset_id or '')
         
         statements = [s.strip() for s in schema_sql.split(';') if s.strip()]
         
@@ -358,14 +352,11 @@ class BigQueryManager:
         if not rows:
             return []
         
-        ids = [row.get('id') for row in rows if row.get('id')]
-        
-        if not ids:
-            return rows
+        ids = [str(row.get('id')) for row in rows if row.get('id')]
         
         existing_ids = self.get_existing_records(table_name, ids)
         
-        new_rows = [row for row in rows if row.get('id') not in existing_ids]
+        new_rows = [row for row in rows if str(row.get('id')) not in existing_ids]
         
         skipped = len(rows) - len(new_rows)
         if skipped > 0:
@@ -374,7 +365,6 @@ class BigQueryManager:
         return new_rows
     
     def insert_raw_data(self, table_name: str, rows: List[Dict], check_duplicates: bool = True):
-
         if not rows:
             logging.warning(f"No rows to insert into {table_name}")
             return
@@ -414,12 +404,10 @@ class BigQueryManager:
                 logging.error(f"Load job errors: {load_job.errors}")
                 raise Exception(f"Load job failed with errors: {load_job.errors}")
             
-            logging.info(f"✓ Loaded {len(rows)} rows into {table_name}")
+            logging.info(f"Loaded {len(rows)} rows into {table_name}")
             
         except Exception as e:
             logging.error(f"Error loading into {table_name}: {e}")
-            if hasattr(e, 'errors'):
-                logging.error(f"Detailed errors: {e.errors}")
             raise Exception(f"BigQuery batch load failed: {e}")
         
         finally:

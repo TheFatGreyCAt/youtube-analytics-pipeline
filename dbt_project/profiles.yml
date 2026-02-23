@@ -6,7 +6,7 @@ yt_analytics_pipeline:
       project: "{{ env_var('GCP_PROJECT_ID') }}"
       keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
       dataset: "{{ env_var('BQ_DATASET_ID', 'raw_yt') }}"
-      location: US
+      location: asia-southeast1
       type: bigquery
       job_execution_timeout_seconds: 300
       job_retries: 1
@@ -18,7 +18,7 @@ yt_analytics_pipeline:
       project: "{{ env_var('GCP_PROJECT_ID') }}"
       keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
       dataset: yt_dbt
-      location: US
+      location: asia-southeast1
       type: bigquery
       job_execution_timeout_seconds: 300
       job_retries: 1

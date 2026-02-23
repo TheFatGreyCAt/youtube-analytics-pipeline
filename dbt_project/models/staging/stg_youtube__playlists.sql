@@ -13,24 +13,24 @@ flattened as (
         -- Primary Key
         id as playlist_id,
         channel_id,
-        
-        -- Snippet fields
-        json_extract_scalar(raw, '$.snippet.title') as playlist_name,
-        json_extract_scalar(raw, '$.snippet.description') as description,
-        cast(json_extract_scalar(raw, '$.snippet.publishedAt') as timestamp) as created_at,
-        
+
+        -- Snippet
+        JSON_VALUE(raw, '$.snippet.title')       as playlist_name,
+        JSON_VALUE(raw, '$.snippet.description') as description,
+        TIMESTAMP(JSON_VALUE(raw, '$.snippet.publishedAt')) as created_at,
+
         -- Content Details
-        cast(json_extract_scalar(raw, '$.contentDetails.itemCount') as int64) as item_count,
-        
+        CAST(JSON_VALUE(raw, '$.contentDetails.itemCount') as INT64) as item_count,
+
         -- Status
-        json_extract_scalar(raw, '$.status.privacyStatus') as privacy_status,
-        
+        JSON_VALUE(raw, '$.status.privacyStatus') as privacy_status,
+
         -- Metadata
-        cast(ingestion_time as timestamp) as crawled_at,
-        current_timestamp() as dbt_loaded_at
-        
+        CAST(ingestion_time as TIMESTAMP) as crawled_at,
+        CURRENT_TIMESTAMP() as dbt_loaded_at
+
     from source
-    where json_extract_scalar(raw, '$.status.privacyStatus') = 'public'  -- Only public playlists
+    where JSON_VALUE(raw, '$.status.privacyStatus') = 'public'
 )
 
 select * from flattened

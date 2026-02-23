@@ -18,37 +18,31 @@ clean-targets:
 
 models:
   yt_analytics_pipeline:
-    +persist_docs:
-      relation: true
-      columns: true
-    
     staging:
       +materialized: view
+      +schema: staging
       +tags: ['staging']
-    
+
     intermediate:
       +materialized: view
+      +schema: intermediate
       +tags: ['intermediate']
-    
+
     mart:
       +materialized: table
+      +schema: mart
       +tags: ['mart', 'production']
-      
+
       fct_video_performance:
-        +materialized: incremental
-        +incremental_strategy: merge
-        +unique_key: video_id
+        +materialized: table
         +partition_by:
           field: published_date
           data_type: date
           granularity: day
         +cluster_by: ['channel_id', 'category_id']
-        +require_partition_filter: false
-      
+
       agg_daily_metrics:
-        +materialized: incremental
-        +incremental_strategy: merge
-        +unique_key: date_channel_key
+        +materialized: table
         +partition_by:
           field: metric_date
           data_type: date
@@ -56,25 +50,14 @@ models:
         +cluster_by: ['channel_id']
 
 vars:
-  # Source configuration
   youtube_raw_database: "{{ env_var('GCP_PROJECT_ID') }}"
   youtube_raw_schema: "{{ env_var('BQ_DATASET_ID', 'raw_yt') }}"
-  
-  # Passthrough columns (Fivetran-style customization)
-  # Users can add custom columns from raw data without editing SQL
+
   youtube__video_passthrough_columns: []
-  # Example: 
-  # youtube__video_passthrough_columns:
-  #   - name: "custom_field"
-  #     alias: "my_custom_field"
-  
   youtube__channel_passthrough_columns: []
-  
-  # Union multiple sources (if tracking multiple YouTube accounts)
+
   youtube__using_multiple_sources: false
   youtube__union_schemas: []
-  # Example:
-  # youtube__union_schemas: ['raw_yt_account1', 'raw_yt_account2']
 
 seeds:
   yt_analytics_pipeline:

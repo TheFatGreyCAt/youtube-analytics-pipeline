@@ -172,10 +172,10 @@ def create_crawl_report_task(crawl_results: Dict) -> str:
     markdown = f"""# YouTube Crawl Report
 
 ## Summary
-- **Total Channels**: {total}
-- **Successful**: {successful}
-- **Failed**: {failed}
-- **Success Rate**: {success_rate:.1f}%
+- Total Channels: {total}
+- Successful: {successful}
+- Failed: {failed}
+- Success Rate: {success_rate:.1f}%
 
 ## Channel Details
 

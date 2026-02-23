@@ -50,3 +50,11 @@ models:
       - name: total_videos_crawled
         tests:
           - not_null
+      - name: latest_video_date
+        description: Date (not timestamp) of most recent video — used by dim_channel_summary for DATE_DIFF
+        tests:
+          - not_null
+      - name: earliest_video_date
+        description: Date (not timestamp) of oldest video — used by dim_channel_summary for DATE_DIFF
+        tests:
+          - not_null

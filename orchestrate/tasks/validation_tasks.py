@@ -1,6 +1,3 @@
-"""
-Validation Tasks - Data quality and health check tasks
-"""
 from prefect import task
 from prefect.artifacts import create_table_artifact
 from typing import Dict
@@ -124,7 +121,7 @@ def generate_health_report_task(pg_health: Dict, bq_health: Dict, api_quota: Dic
         api_quota['status'] != 'critical' and
         data_freshness['status'] != 'critical'
     )
-    
+
     report = {
         'timestamp': datetime.now().isoformat(),
         'overall_status': 'healthy' if all_healthy else 'degraded',
@@ -140,27 +137,19 @@ def generate_health_report_task(pg_health: Dict, bq_health: Dict, api_quota: Dic
             'quota_percentage': api_quota['percentage_used']
         }
     }
-    
+
     table_data = [
         ['Component', 'Status', 'Message'],
         ['PostgreSQL', pg_health['status'], pg_health['message']],
         ['BigQuery', bq_health['status'], bq_health['message']],
         ['API Quota', api_quota['status'], api_quota['message']],
-        ['Data Freshness', data_freshness['status'], 
-         f"{data_freshness['stale_channels']} stale channels"]
+        ['Data Freshness', data_freshness['status'], f"{data_freshness['stale_channels']} stale channels"]
     ]
-    
+
     create_table_artifact(
         key="health-report",
         table=table_data,
         description="System Health Check Report"
     )
-    
-    print(f"\nSystem Health Report")
-    print(f"Overall Status: {report['overall_status'].upper()}")
-    print(f"PostgreSQL: {pg_health['status']}")
-    print(f"BigQuery: {bq_health['status']}")
-    print(f"API Quota: {api_quota['percentage_used']:.1f}% used")
-    print(f"Data Freshness: {data_freshness['stale_channels']} stale channels\n")
-    
+
     return report

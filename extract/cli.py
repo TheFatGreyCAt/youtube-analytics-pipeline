@@ -126,7 +126,6 @@ def crawl_from_file(limit: int = None):
 
 
 def main():
-    """Main CLI entry point"""
     parser = argparse.ArgumentParser(
         description='YouTube Analytics Extract CLI',
         formatter_class=argparse.RawDescriptionHelpFormatter,

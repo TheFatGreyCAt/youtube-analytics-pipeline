@@ -1,7 +1,6 @@
 {{
     config(
-        materialized='incremental',
-        unique_key='date_channel_key',
+        materialized='table',
         partition_by={
             'field': 'metric_date',
             'data_type': 'date',
@@ -33,11 +32,6 @@ daily_agg as (
         current_timestamp() as dbt_updated_at
         
     from videos
-    
-    {% if is_incremental() %}
-        where date(published_at) > (select max(metric_date) from {{ this }})
-    {% endif %}
-    
     group by 1, 2
 ),
 
