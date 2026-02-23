@@ -14,16 +14,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    
-  # pgadmin:
-  #   image: dpage/pgadmin4:9.8
-  #   ports:
-  #     - 5050:80
-  #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
-  #     PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
-  #     PGADMIN_CONFIG_SERVER_MODE: 'False'
-  #     PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
 
   redis: 
     image: redis:7
@@ -50,39 +40,41 @@ services:
       PREFECT_REDIS_MESSAGING_HOST: redis
       PREFECT_REDIS_MESSAGING_PORT: 6379
       PREFECT_REDIS_MESSAGING_DB: 0
-    command: prefect server start --no-services
+    command: prefect server start
     ports:
       - "${PREFECT_SERVER_PORT:-4200}:4200"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:4200/api/health', timeout=1)"]
+      test: ["CMD", "curl", "-f", "http://localhost:4200/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
 
-  prefect-services:
-    image: prefecthq/prefect:3-latest
-    depends_on:
-      prefect-server:
-        condition: service_healthy
-    environment:
-      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://${PG_USER}:${PG_PASSWORD}@postgres:5432/${PG_DATABASE}
-      PREFECT_MESSAGING_BROKER: prefect_redis.messaging
-      PREFECT_MESSAGING_CACHE: prefect_redis.messaging
-      PREFECT_REDIS_MESSAGING_HOST: redis
-      PREFECT_REDIS_MESSAGING_PORT: 6379
-      PREFECT_REDIS_MESSAGING_DB: 0
-    command: prefect server services start
-
   prefect-worker:
-    image: prefecthq/prefect:3-latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.prefect
     depends_on:
       prefect-server:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     environment:
-      PREFECT_API_URL: ${PREFECT_API_URL:-http://prefect-server:4200/api}
-    command: prefect worker start --pool local-pool
-    restart: on-failure
+      PREFECT_API_URL: http://prefect-server:4200/api
+      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY}
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+      BQ_DATASET_ID: ${BQ_DATASET_ID}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS}
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_DATABASE: ${PG_DATABASE}
+      PG_USER: ${PG_USER}
+      PG_PASSWORD: ${PG_PASSWORD}
+    volumes:
+      - ./credentials:/app/credentials:ro
+      - ./config:/app/config:ro
+      - ./logs:/app/logs
+    restart: unless-stopped
 
 volumes:
   postgres_data:

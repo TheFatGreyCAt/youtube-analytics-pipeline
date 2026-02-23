@@ -1,0 +1,64 @@
+name: youtube-analytics-pipeline
+version: 1.0.0
+
+prefect-version: 3.6.15
+
+build: null
+push: null
+
+pull:
+- prefect.deployments.steps.set_working_directory:
+    directory: /app
+
+deployments:
+- name: daily-youtube-analytics
+  version: 1.0.0
+  tags:
+    - youtube
+    - daily
+    - production
+  description: Chạy pipeline YouTube Analytics hàng ngày lúc 2:00 sáng
+  entrypoint: orchestrate/flows/youtube_flow.py:youtube_analytics_pipeline
+  work_pool:
+    name: default-pool
+  schedule:
+    cron: "0 2 * * *"
+    timezone: Asia/Ho_Chi_Minh
+  parameters:
+    crawl_limit: 15
+    include_comments: false
+    run_dbt_tests: true
+    health_check_first: true
+
+- name: extract-3times-daily
+  version: 1.0.0
+  tags:
+    - youtube
+    - extract
+    - frequent
+  description: Crawl YouTube data 3 lần/ngày
+  entrypoint: orchestrate/flows/youtube_flow.py:extract_only_pipeline
+  work_pool:
+    name: default-pool
+  schedule:
+    cron: "0 8,14,20 * * *"
+    timezone: Asia/Ho_Chi_Minh
+  parameters:
+    crawl_limit: 10
+    include_comments: false
+
+- name: dbt-transform-daily
+  version: 1.0.0
+  tags:
+    - dbt
+    - transform
+    - daily
+  description: Chạy dbt transformation sau extract
+  entrypoint: orchestrate/flows/youtube_flow.py:transform_only_pipeline
+  work_pool:
+    name: default-pool
+  schedule:
+    cron: "30 8,14,20 * * *"
+    timezone: Asia/Ho_Chi_Minh
+  parameters:
+    run_tests: true

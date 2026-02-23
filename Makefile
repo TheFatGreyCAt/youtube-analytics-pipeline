@@ -1,4 +1,4 @@
-.PHONY: help setup up down logs clean crawl list dbt-debug dbt-run dbt-test dbt-pipeline dbt-staging dbt-mart monitor quota-check estimate
+.PHONY: help setup up down logs clean crawl list dbt-debug dbt-run dbt-test dbt-pipeline dbt-staging dbt-mart monitor quota-check estimate prefect-deploy prefect-logs prefect-restart
 
 help:
 	@echo "YouTube Analytics Pipeline Commands"
@@ -9,6 +9,11 @@ help:
 	@echo "  make down        - Stop services"
 	@echo "  make logs        - View logs"
 	@echo "  make clean       - Remove all"
+	@echo ""
+	@echo "Prefect Deployment:"
+	@echo "  make prefect-deploy  - Deploy workflows with schedule"
+	@echo "  make prefect-logs    - View Prefect worker logs"
+	@echo "  make prefect-restart - Restart Prefect worker"
 	@echo ""
 	@echo "Monitoring & Status:"
 	@echo "  make monitor     - Check quota & system status"
@@ -41,6 +46,16 @@ down:
 
 logs:
 	docker compose logs -f
+
+# Prefect deployment
+prefect-deploy:
+	python script/deploy_prefect.py
+
+prefect-logs:
+	docker compose logs -f prefect-worker
+
+prefect-restart:
+	docker compose restart prefect-worker
 
 # Monitoring commands
 monitor:

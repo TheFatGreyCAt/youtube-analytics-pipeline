@@ -1,44 +1,129 @@
 # YouTube Analytics Pipeline
 
-Data pipeline for YouTube channel analytics using GCP, dbt, Prefect, and Streamlit.
+A complete data pipeline for analyzing YouTube channels using Google Cloud Platform, dbt, Prefect, and Streamlit. This project helps you automatically collect, transform, and visualize YouTube channel performance data.
 
-## 🚀 Quick Start Guide (10-15 Channels)
+## Quick Start for New Users
 
-### 1. Setup Environment
+If you're setting up this project for the first time, you can use the automated setup script that handles everything in one go.
 
+### Prerequisites
+
+Before you begin, make sure you have:
+- Python 3.12 or higher installed
+- Docker Desktop installed and running
+- A YouTube Data API key from Google Cloud Console
+- A Google Cloud service account with BigQuery permissions
+
+### One-Click Setup
+
+For Windows users:
 ```bash
-# Copy .env.example to .env and update values
-cp .env.example .env
-
-# Edit .env with your credentials
-# - YOUTUBE_API_KEY
-# - GCP_PROJECT_ID  
-# - GOOGLE_APPLICATION_CREDENTIALS
-# - PostgreSQL credentials
+setup.bat
 ```
 
-### 2. Install Dependencies
+For Linux or Mac users:
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+You can also run the Python script directly:
+```bash
+python script/setup_all.py
+```
+
+Or use Make if you have it installed:
+```bash
+make setup-all
+```
+
+The setup script will automatically:
+1. Check if Python and Docker are properly installed
+2. Create a .env configuration file from the template
+3. Verify your Google Cloud credentials
+4. Install all required Python packages
+5. Start Docker services (Postgres, Redis, Prefect)
+6. Set up database tables and schemas
+7. Deploy Prefect workflows with automatic scheduling
+8. Optionally help you add sample channels and run a test crawl
+
+After the script completes, you'll need to:
+1. Update your API credentials in the .env file
+2. Add YouTube channels you want to track
+3. Access the Prefect UI at http://localhost:4200
+
+## Manual Setup Guide
+
+If you prefer to set things up step by step, or if the automated setup doesn't work for your environment, follow these instructions.
+
+### Step 1: Environment Configuration
+
+Copy the example environment file and edit it with your credentials:
+
+```bash
+cp .env.example .env
+```
+
+Open the .env file and update these important values:
+- YOUTUBE_API_KEY: Your YouTube Data API key
+- GCP_PROJECT_ID: Your Google Cloud project ID
+- GOOGLE_APPLICATION_CREDENTIALS: Path to your service account key file
+- PG_PASSWORD: A secure password for PostgreSQL
+
+### Step 2: Install Python Dependencies
+
+Create a virtual environment and install packages:
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate  # Windows
-pip install -e ".[all]"  # Install all dependencies
+.venv\Scripts\activate
+pip install -e ".[all]"
 ```
 
-### 3. Setup Databases
+The [all] option installs everything you need: extraction tools, orchestration, transformation, and dashboard components.
+
+### Step 3: Start Docker Services
+
+Use Docker Compose to start the required services:
 
 ```bash
-# Start Docker services
-make up
-
-# Setup database schemas
-make setup
-# Or: python -m extract.cli setup
+docker compose up -d
 ```
 
-### 4. Add Channels
+This starts PostgreSQL, Redis, and Prefect server. Wait about a minute for all services to be ready.
 
-**Option 1: Edit config/channels.yml**
+### Step 4: Initialize Database
+
+Create the necessary database tables:
+
+```bash
+python -m extract.cli setup
+```
+
+Or using Make:
+
+```bash
+make setup
+```
+
+### Step 5: Add YouTube Channels
+
+You have several options for adding channels to track:
+
+Option 1 - Using the command line:
+```bash
+python -m extract.cli add UCXuqSBlHAE6Xw-yeJA0Tunw "Linus Tech Tips"
+```
+
+Option 2 - Bulk import from CSV:
+```bash
+python script/bulk_add_channels.py config/channels_template.csv
+```
+
+Option 3 - Edit the config file directly:
+
+Open config/channels.yml and add your channels:
+
 ```yaml
 channels:
   - id: UCXuqSBlHAE6Xw-yeJA0Tunw
@@ -49,293 +134,487 @@ channels:
     include_comments: false
 ```
 
-**Option 2: Use Bulk Add Script**
+### Step 6: Deploy Prefect Workflows
+
+Set up automated scheduling with Prefect:
+
 ```bash
-# Edit config/channels_template.csv
-python script/bulk_add_channels.py config/channels_template.csv
+python script/deploy_prefect.py
 ```
 
-**Option 3: Add via CLI**
-```bash
-python -m extract.cli add <CHANNEL_ID> "Channel Name"
-```
+This deploys three workflows with different schedules:
+- daily-youtube-analytics: Runs at 2:00 AM every day (full pipeline)
+- extract-3times-daily: Runs at 8:00 AM, 2:00 PM, and 8:00 PM (data collection only)
+- dbt-transform-daily: Runs at 8:30 AM, 2:30 PM, and 8:30 PM (data transformation only)
 
-### 5. Check System Status
+## Understanding YouTube API Quotas
+
+The YouTube Data API has daily quota limits that you need to be aware of:
+
+Daily quota limit: 10,000 units per day
+
+Typical costs per channel:
+- Basic channel info: 1 unit
+- Recent videos list: 1-2 units per 50 videos
+- Playlists: 1 unit (optional)
+- Comments: 1 unit per video (only for recent 10 videos)
+
+Total per channel: Usually 5-15 units without comments, up to 25 units with comments enabled
+
+Recommended daily limits:
+- Without comments: 15 channels safely
+- With comments: 10 channels to stay under quota
+
+Before crawling, always check your current quota usage:
 
 ```bash
-# Monitor API quota and channel status
 python script/monitor_quota.py
+```
 
-# Estimate quota cost before crawling
+To estimate cost before running:
+
+```bash
 python script/monitor_quota.py --estimate 15
-
-# With comments enabled
-python script/monitor_quota.py --estimate 15 --with-comments
 ```
 
-### 6. Run Crawl
+## Collecting Data from YouTube
+
+### Monitor System Status First
+
+Always check your quota status before crawling:
 
 ```bash
-# Crawl 10 channels (recommended first time)
+python script/monitor_quota.py
+```
+
+This shows:
+- Current API quota usage
+- Available remaining quota
+- List of channels and their last crawl time
+- System health status
+
+### Running a Crawl
+
+Crawl channels from your config file (recommended method):
+
+```bash
 python -m extract.cli crawl-file --limit 10
-
-# Or use Makefile
-make crawl
 ```
 
-### 7. Run dbt Transformation
+This reads from config/channels.yml and processes up to 10 channels. The system automatically:
+- Respects API rate limits
+- Retries failed requests
+- Logs all activities
+- Stops if quota reaches 90 percent
+
+For a specific channel:
 
 ```bash
-# Run full dbt pipeline
-python script/dbt_cli.py pipeline
+python -m extract.cli crawl --channel UCXuqSBlHAE6Xw-yeJA0Tunw
+```
 
-# Or use Makefile
+To include comments (uses more quota):
+
+```bash
+python -m extract.cli crawl --channel UCXuqSBlHAE6Xw-yeJA0Tunw --with-comments
+```
+
+### Managing Channels
+
+List all tracked channels:
+
+```bash
+python -m extract.cli channels
+```
+
+View crawl history:
+
+```bash
+python -m extract.cli history --limit 20
+```
+
+## Transforming Data with dbt
+
+After collecting data, use dbt to transform and clean it.
+
+### Check dbt Connection
+
+Verify dbt can connect to BigQuery:
+
+```bash
+python script/dbt_cli.py debug
+```
+
+### Run Complete Pipeline
+
+This runs all transformation steps including tests:
+
+```bash
+python script/dbt_cli.py pipeline
+```
+
+Or using Make:
+
+```bash
 make dbt-pipeline
 ```
 
-## 📊 Important Limits & Quotas
+The pipeline does:
+1. Install dbt package dependencies
+2. Run all dbt models (staging, intermediate, mart layers)
+3. Execute data quality tests
+4. Generate documentation
 
-### YouTube API Quota
-- **Daily Limit**: 10,000 units/day
-- **Per Channel**: ~5-15 units (without comments)
-- **With Comments**: +10 units per channel
-- **Safe Daily Limit**: 15 channels without comments, 10 with comments
+### Run Specific Layers
 
-### Recommended Settings (config/channels.yml)
-```yaml
-settings:
-  max_videos_per_channel: 50      # Don't exceed 100
-  max_comments_per_video: 100     # Only for important channels
-  batch_size: 10                  # Process 10 channels at a time
-  api_delay_seconds: 0.5          # Rate limiting
-```
+Run only staging models:
 
-## 🛠️ Useful Commands
-
-### Monitoring
 ```bash
-# Check system status
-python script/monitor_quota.py
-
-# View quota only
-python script/monitor_quota.py --quota-only
-
-# View channels only  
-python script/monitor_quota.py --channels-only
-
-# Estimate cost for N channels
-python script/monitor_quota.py --estimate 15
-```
-
-### Channel Management
-```bash
-# List all channels
-python -m extract.cli channels
-
-# View crawl history
-python -m extract.cli history --limit 20
-
-# Add single channel
-python -m extract.cli add <ID> "Name" --frequency 24
-
-# Bulk add from file
-python script/bulk_add_channels.py channels.csv
-```
-
-### Data Extraction
-```bash
-# Crawl from config file (RECOMMENDED)
-python -m extract.cli crawl-file --limit 10
-
-# Crawl specific channel
-python -m extract.cli crawl --channel <ID> --with-comments
-
-# Crawl scheduled channels from DB
-python -m extract.cli crawl --limit 10
-```
-
-### dbt Operations
-```bash
-# Check connection
-python script/dbt_cli.py debug
-
-# Run full pipeline (deps -> run -> test)
-python script/dbt_cli.py pipeline
-
-# Run specific layer
 python script/dbt_cli.py run --select staging.*
+```
+
+Run only mart models:
+
+```bash
 python script/dbt_cli.py run --select mart.*
+```
 
-# Run tests only
+### Run Tests Only
+
+Execute data quality tests without running models:
+
+```bash
 python script/dbt_cli.py test
-
-# Full refresh
-python script/dbt_cli.py full-refresh
 ```
 
-### Docker Services
+## Automated Scheduling with Docker
+
+The project includes Docker-based Prefect deployment for hands-off operation.
+
+### Deploy Workflows
+
+Start everything with one command:
+
 ```bash
-# Start all services
-make up
-
-# Stop services
-make down
-
-# View logs
-make logs
-
-# Clean up everything
-make clean
+python script/deploy_prefect.py
 ```
 
-## 📋 Daily Workflow (10-15 Channels)
+Or on Windows:
 
 ```bash
-# Morning: Check quota status
+script\deploy_prefect.bat
+```
+
+On Linux/Mac:
+
+```bash
+./script/deploy_prefect.sh
+```
+
+Using Make:
+
+```bash
+make prefect-deploy
+```
+
+### Managing Docker Services
+
+View logs from the Prefect worker:
+
+```bash
+docker compose logs -f prefect-worker
+```
+
+View logs from the Prefect server:
+
+```bash
+docker compose logs -f prefect-server
+```
+
+Check service status:
+
+```bash
+docker compose ps
+```
+
+Restart the worker (after code changes):
+
+```bash
+docker compose restart prefect-worker
+```
+
+Rebuild the worker image (after dependency changes):
+
+```bash
+docker compose up -d --build prefect-worker
+```
+
+Stop all services:
+
+```bash
+docker compose down
+```
+
+Remove all data including volumes:
+
+```bash
+docker compose down -v
+```
+
+### Customizing Schedules
+
+Edit config/prefect.yaml to change when workflows run:
+
+Run at 4 AM instead of 2 AM:
+```yaml
+schedule:
+  cron: "0 4 * * *"
+  timezone: Asia/Ho_Chi_Minh
+```
+
+Run every 6 hours:
+```yaml
+schedule:
+  cron: "0 */6 * * *"
+  timezone: Asia/Ho_Chi_Minh
+```
+
+Run only weekdays:
+```yaml
+schedule:
+  cron: "0 2 * * 1-5"
+  timezone: Asia/Ho_Chi_Minh
+```
+
+Change crawl limits:
+```yaml
+parameters:
+  crawl_limit: 20
+  include_comments: true
+  run_dbt_tests: true
+```
+
+After editing, redeploy:
+
+```bash
+python script/deploy_prefect.py
+```
+
+### Checking Deployments
+
+List all deployments:
+
+```bash
+docker compose exec prefect-worker prefect deployment ls
+```
+
+Run a deployment immediately (don't wait for schedule):
+
+```bash
+docker compose exec prefect-worker prefect deployment run youtube-analytics-pipeline/daily-youtube-analytics
+```
+
+View recent flow runs:
+
+```bash
+docker compose exec prefect-worker prefect flow-run ls --limit 10
+```
+
+## Daily Workflow Example
+
+Here's a typical daily workflow for managing 10-15 channels:
+
+Morning - Check quota status:
+```bash
 python script/monitor_quota.py
+```
 
-# If quota < 20%, crawl channels
+If quota looks good (under 80 percent used), run a crawl:
+```bash
 python -m extract.cli crawl-file --limit 15
+```
 
-# Transform data with dbt
+Transform the new data:
+```bash
 python script/dbt_cli.py pipeline
+```
 
-# Check results
+Check the results:
+```bash
 python script/monitor_quota.py
 ```
 
-## ⚠️ Important Notes
+With automated scheduling through Prefect, these steps happen automatically at the times you configure.
 
-1. **API Quota Management**
-   - Check quota before each crawl
-   - Stop at 90% usage automatically
-   - Monitor with `python script/monitor_quota.py`
+## Accessing Services
 
-2. **Error Handling**
-   - System will retry failed API calls (2 times)
-   - Failed channels are logged and can be re-crawled
-   - Check logs in `logs/` directory
+After starting Docker services, you can access:
 
-3. **Performance Tips**
-   - Crawl during off-peak hours
-   - Use `api_delay_seconds: 0.5` to avoid rate limits
-   - Enable comments only for important channels
-   - Batch process 10-15 channels at a time
+Prefect UI: http://localhost:4200
+Use this to monitor workflow runs, view logs, and manage schedules.
 
-4. **Data Quality**
-   - dbt runs data quality tests automatically
-   - Check `dbt_project/tests/` for test definitions
-   - View test results in dbt logs
+Streamlit Dashboard: http://localhost:8501
+View analytics and visualizations of your YouTube data.
 
-## 🎯 Quota Cost Estimation
+PgAdmin: http://localhost:5050 (if enabled in compose.yml)
+Database management interface for PostgreSQL.
 
-| Operation | Cost | Notes |
-|-----------|------|-------|
-| Channel info | 1 unit | Basic metadata |
-| Videos list | 1-2 units | Per 50 videos |
-| Playlists | 1 unit | Optional |
-| Comments | 1 unit/video | Only recent 10 videos |
-| **Total per channel** | **5-15 units** | Depends on settings |
+## Configuration Files
 
-**Examples:**
-- 10 channels, no comments: ~50-75 units
-- 15 channels, no comments: ~75-100 units  
-- 10 channels, with comments: ~150 units
-- 15 channels, with comments: ~225 units
+Understanding the key configuration files:
 
-## 📁 Project Structure
+.env file:
+Contains all environment variables including API keys, database credentials, and service settings. This file is gitignored for security.
 
-```
-youtube-analytics-pipeline/
-├── extract/              # Data extraction from YouTube API
-├── orchestrate/          # Workflow orchestration (Prefect)
-├── dbt_project/          # Data transformation (dbt)
-├── serve/                # Dashboard (Streamlit)
-├── script/               # Utility scripts
-│   ├── dbt_cli.py       # dbt wrapper
-│   ├── monitor_quota.py # System monitoring ⭐
-│   └── bulk_add_channels.py # Bulk channel import ⭐
-├── config/               # Configuration files
-│   ├── channels.yml     # Active channels
-│   └── channels_template.csv # Template for bulk add
-├── compose.yml           # Docker services
-├── Makefile              # Command shortcuts
-├── pyproject.toml        # Python dependencies
-└── .env                  # Environment config
-```
+config/channels.yml:
+Lists all YouTube channels to track with their settings like crawl frequency and priority.
 
-## 🔧 Troubleshooting
+config/prefect.yaml:
+Defines Prefect workflows and their schedules for automated execution.
 
-### "API quota limit reached"
+compose.yml:
+Docker Compose configuration for all services (Postgres, Redis, Prefect server and worker).
+
+pyproject.toml:
+Python package dependencies organized by component (extract, orchestrate, serve, dev).
+
+## Useful Commands Reference
+
+Monitoring and status:
 ```bash
-# Check current quota
-python script/monitor_quota.py --quota-only
-
-# Wait until tomorrow or reduce channels
+python script/monitor_quota.py                    # Full system status
+python script/monitor_quota.py --quota-only       # Just quota info
+python script/monitor_quota.py --channels-only    # Just channel list
+python script/monitor_quota.py --estimate 15      # Estimate cost
 ```
 
-### "Channel not found"
+Channel management:
 ```bash
-# Verify channel ID is correct (should be UC...)
-# Check if channel is public
+python -m extract.cli channels                    # List all channels
+python -m extract.cli history --limit 20          # View history
+python -m extract.cli add ID "Name"               # Add channel
 ```
 
-### "Database connection error"
+Data extraction:
 ```bash
-# Check if PostgreSQL is running
-make up
-
-# Verify credentials in .env
+python -m extract.cli crawl-file --limit 10       # Crawl from config
+python -m extract.cli crawl --channel ID          # Crawl specific
+python -m extract.cli crawl --limit 10            # Crawl scheduled
 ```
 
-### "BigQuery permission denied"
+dbt operations:
 ```bash
-# Check service account has BigQuery Admin role
-# Verify GOOGLE_APPLICATION_CREDENTIALS path
+python script/dbt_cli.py debug                    # Check connection
+python script/dbt_cli.py pipeline                 # Full pipeline
+python script/dbt_cli.py run                      # Run models
+python script/dbt_cli.py test                     # Run tests
+python script/dbt_cli.py run --select staging.*   # Specific layer
 ```
 
-## 📚 Environment Variables
-
+Docker services:
 ```bash
-# Required
-YOUTUBE_API_KEY=your_api_key           # Get from Google Cloud Console
-GCP_PROJECT_ID=your_project_id         # GCP project
-BQ_DATASET_ID=raw_yt                   # BigQuery dataset
-GOOGLE_APPLICATION_CREDENTIALS=path     # Service account key
-
-# PostgreSQL (from Docker Compose)
-PG_HOST=localhost
-PG_PORT=5432
-PG_DATABASE=prefect
-PG_USER=prefect
-PG_PASSWORD=your_password
-
-# Optional
-MAX_VIDEOS_PER_CHANNEL=50              # Override channels.yml
-MAX_COMMENTS_PER_VIDEO=100
-API_DELAY_SECONDS=0.5
+make up              # Start all services
+make down            # Stop services  
+make logs            # View all logs
+make clean           # Remove everything
+make prefect-deploy  # Deploy workflows
+make prefect-logs    # View worker logs
 ```
 
-## 📈 Access Services
+## Project Structure
 
-After running `make up`:
-- **Prefect UI**: http://localhost:4200
-- **Streamlit Dashboard**: http://localhost:8501
-- **PgAdmin**: http://localhost:5050 (if enabled)
+The project is organized into several main directories:
 
-## 🆘 Getting Help
+extract/
+Contains code for collecting data from YouTube API. Includes the CLI tool, crawler logic, database manager, and schema definitions.
 
+orchestrate/
+Prefect workflows and task definitions for automating the pipeline. Contains flows for extraction, transformation, and monitoring.
+
+dbt_project/
+All dbt transformation code including models, tests, macros, and seeds. Organized into staging, intermediate, and mart layers.
+
+serve/
+Streamlit dashboard application for visualizing the data.
+
+script/
+Utility scripts for common tasks like monitoring quotas, deploying Prefect, running dbt, and bulk operations.
+
+config/
+Configuration files for channels, Prefect workflows, and application settings.
+
+docker/
+Dockerfiles for different components of the system.
+
+## Troubleshooting Common Issues
+
+API quota limit reached:
+Check your current usage with the monitor script. If you're near the limit, wait until the quota resets (midnight Pacific Time) or reduce the number of channels you're tracking.
+
+Channel not found error:
+Verify the channel ID is correct. YouTube channel IDs start with "UC" and are 24 characters long. Make sure the channel is public and hasn't been deleted.
+
+Database connection error:
+Ensure Docker services are running with "docker compose ps". Check that your .env file has correct database credentials matching those in compose.yml.
+
+BigQuery permission denied:
+Verify your service account has the BigQuery Admin role in Google Cloud Console. Check that the GOOGLE_APPLICATION_CREDENTIALS path in .env points to a valid key file.
+
+Prefect worker not picking up jobs:
+Make sure the worker is running and connected to the right server. Check logs with "docker compose logs prefect-worker". Verify the work pool name matches in both config/prefect.yaml and the worker startup command.
+
+## Performance Tips
+
+For optimal performance with limited quota:
+- Crawl during off-peak hours when you're less likely to need quota for testing
+- Use a small delay between API calls (0.5 seconds is safe)
+- Only enable comments for your most important channels
+- Process channels in batches of 10-15 rather than all at once
+- Monitor quota regularly to avoid unexpected limits
+
+For better data quality:
+- Run dbt tests after every transformation
+- Check dbt logs for any warnings or errors
+- Review the assert tests in dbt_project/tests directory
+- Use the Streamlit dashboard to spot anomalies
+
+## Important Notes
+
+About API quotas:
+The system has built-in protection and will stop automatically at 90 percent quota usage. However, you should still monitor usage regularly, especially when adding new channels or enabling comments.
+
+About error handling:
+Failed API calls are automatically retried twice. If a channel still fails, it's logged and you can try again later. Check the logs directory for detailed error information.
+
+About data freshness:
+Raw data is stored in PostgreSQL and BigQuery. The dbt models transform this into analytics tables. For the freshest data, run the full pipeline after each crawl.
+
+About Docker volumes:
+Database data persists in Docker volumes. Use "docker compose down -v" to completely reset the database, but be aware this deletes all collected data.
+
+About credentials:
+Never commit your .env file or service account keys to version control. The .gitignore file is set up to exclude these, but always double-check before pushing code.
+
+## Getting Help
+
+If you run into issues:
+
+Check the logs in the logs/ directory for detailed error messages.
+
+Use the help flag on any command to see available options:
 ```bash
-# CLI help
 python -m extract.cli --help
-
-# dbt help
 python script/dbt_cli.py --help
-
-# Monitor help
 python script/monitor_quota.py --help
+```
+
+Review the documentation in the docs/ directory for more detailed information about specific components.
+
+Check Docker service logs if something isn't working:
+```bash
+docker compose logs service-name
 ```
 
 ## License
 
-MIT
+This project is licensed under the MIT License.

@@ -1,44 +1,39 @@
-__pycache__
-*.pyc
-*.pyo
-*.pyd
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
 .Python
-.venv
-venv/
 env/
-.env
-.env.local
-.env.*.local
-
-# IDE
-.vscode
-.idea
-*.swp
-*.swo
-*~
-
-# Git
-.git
-.gitignore
-
-# Project specific
-dbt_project/target/
-dbt_project/logs/
-.DS_Store
-*.log
-
-# Docker
-.dockerignore
-docker-compose.override.yml
-
-# Testing
-.pytest_cache
+venv/
+.venv/
+ENV/
+.pytest_cache/
 .coverage
 htmlcov/
+dist/
+build/
+*.egg-info/
+.eggs/
 
-# Jupyter
-.ipynb_checkpoints
+.git/
+.github/
+.vscode/
+.idea/
+
+*.log
+logs/
+dbt_project/logs/
+dbt_project/target/
+
+.env
+.env.local
+
 *.ipynb_checkpoints
 
-# Prefect
-.prefect
+docs/
+tests/
+ml/
+
+README.md
+Makefile
+docker-compose.override.yml
