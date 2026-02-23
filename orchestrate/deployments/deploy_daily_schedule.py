@@ -24,8 +24,3 @@ if __name__ == "__main__":
     )
     
     args = parser.parse_args()
-    
-    print("Với Prefect 3.x, hãy sử dụng prefect.yaml để cấu hình deployment")
-    print("\nHoặc sử dụng lệnh:")
-    print("  prefect deploy")
-    print("\nXem hướng dẫn: https://docs.prefect.io/3.0/deploy/")

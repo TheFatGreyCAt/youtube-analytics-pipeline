@@ -14,7 +14,7 @@ flattened as (
         
         JSON_VALUE(raw, '$.items[0].snippet.title') as channel_name,
         JSON_VALUE(raw, '$.items[0].snippet.description') as description,
-        PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%SZ', JSON_VALUE(raw, '$.items[0].snippet.publishedAt')) as channel_created_at,
+        TIMESTAMP(JSON_VALUE(raw, '$.items[0].snippet.publishedAt')) as channel_created_at,
         JSON_VALUE(raw, '$.items[0].snippet.country') as country_code,
         JSON_VALUE(raw, '$.items[0].snippet.customUrl') as custom_url,
         
