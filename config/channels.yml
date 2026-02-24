@@ -364,8 +364,8 @@ channels:
     include_comments: false
 
 settings:
-  max_videos_per_channel: 500
-  max_comments_per_video: 100
-  batch_size: 10
+  max_videos_per_channel: 1000
+  max_comments_per_video: 20000
+  batch_size: 100
   retry_failed_after_hours: 1
   api_delay_seconds: 0.5
