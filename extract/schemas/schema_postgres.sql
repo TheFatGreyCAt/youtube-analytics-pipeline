@@ -2,7 +2,6 @@
 -- Purpose: Crawl scheduling, execution logs, API quota tracking
 -- Data Storage: All YouTube data goes to BigQuery
 
-
 -- METADATA & CONFIG TABLES
 CREATE TABLE IF NOT EXISTS channels_config (
     channel_id VARCHAR(100) PRIMARY KEY,
@@ -11,14 +10,17 @@ CREATE TABLE IF NOT EXISTS channels_config (
     crawl_status VARCHAR(50) DEFAULT 'pending',
     last_crawl_ts TIMESTAMP,
     next_crawl_ts TIMESTAMP DEFAULT NOW(),
+    last_video_published_at TIMESTAMP,
     is_active BOOLEAN DEFAULT TRUE,
     priority INT DEFAULT 1,
+    include_comments BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_channels_next_crawl ON channels_config(next_crawl_ts) WHERE is_active = TRUE;
 CREATE INDEX IF NOT EXISTS idx_channels_status ON channels_config(crawl_status);
+CREATE INDEX IF NOT EXISTS idx_channels_priority ON channels_config(priority DESC, next_crawl_ts);
 
 -- CRAWL EXECUTION LOG
 CREATE TABLE IF NOT EXISTS crawl_log (
@@ -63,13 +65,6 @@ DROP TRIGGER IF EXISTS trg_channels_config_updated ON channels_config;
 CREATE TRIGGER trg_channels_config_updated
 BEFORE UPDATE ON channels_config
 FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
--- SAMPLE DATA
-INSERT INTO channels_config (channel_id, channel_name, crawl_frequency_hours, priority)
-VALUES 
-    ('UCXuqSBlHAE6Xw-yeJA0Tunw', 'Linus Tech Tips', 24, 1),
-    ('UC4w1YQAJMWOz4qtxinq55LQ', 'Mkbhd', 24, 1)
-ON CONFLICT (channel_id) DO NOTHING;
 
 INSERT INTO api_quota_usage (date, quota_used, daily_limit)
 VALUES (CURRENT_DATE, 0, 10000)
