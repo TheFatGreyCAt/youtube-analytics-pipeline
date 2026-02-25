@@ -5,6 +5,14 @@ models:
     description: Fact table for video-level performance analytics
     config:
       tags: ['mart', 'fact', 'incremental']
+      materialized: table
+      partition_by:
+        field: published_date
+        data_type: date
+        granularity: month
+      cluster_by:
+        - channel_id
+        - video_id
     columns:
       - name: video_id
         description: YouTube Video ID (primary key)
@@ -76,6 +84,9 @@ models:
     description: Dimension table for channel-level analytics
     config:
       tags: ['mart', 'dimension']
+      materialized: table
+      cluster_by:
+        - channel_id
     columns:
       - name: channel_id
         description: YouTube Channel ID (primary key)
@@ -120,6 +131,14 @@ models:
     description: Daily aggregated metrics per channel, grouped by video publish date
     config:
       tags: ['mart', 'aggregate', 'incremental']
+      materialized: table
+      partition_by:
+        field: metric_date
+        data_type: date
+        granularity: month
+      cluster_by:
+        - channel_id
+        - metric_date
     columns:
       - name: date_channel_key
         description: Surrogate key = hash(metric_date, channel_id)
