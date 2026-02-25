@@ -1,5 +1,56 @@
-channel_id,channel_name,frequency_hours
-UCXuqSBlHAE6Xw-yeJA0Tunw,Linus Tech Tips,24
-UC4w1YQAJMWOz4qtxinq55LQ,MKBHD,24
-UCuMJPFqazQI4SofSFEd-5zA,Cô Ngân TV,12
-UCJ0-OtVpF0SU9F3RVKz__bg,Duy Thanh Nguyễn,24
+num_id,channel_name
+1,MrBeast
+2,T-Series
+3,Cocomelon
+4,SET India
+5,Vlad and Niki
+6,Kids Diana Show
+7,Stokes Twins
+8,Like Nastya
+9,김프로KIMPRO
+10,Zee Music Company
+11,PewDiePie
+12,WWE
+13,Goldmines
+14,Sony SAB
+15,BLACKPINK
+16,ChuChu TV Nursery Rhymes
+17,Alan's Universe
+18,Zee TV
+19,Alejo Igoa
+20,A4
+21,Giai Điệu Tinh Hoa
+22,Schannel
+23,Phân Tích Game
+24,Trải Nghiệm Game
+25,Đêm Nhạc Đặc Biệt
+26,ACN
+27,Nàng Thơ Music
+28,Premier League
+29,Củ Đậu Story
+30,Tuấn Tiền Tỉ
+31,Phê Phim
+32,Việt Nguyễn AI
+33,Spiderum
+34,Nick DiGiovanni
+35,Dũng Lại Lập Trình
+36,BLV Anh Quân
+37,VTV24
+38,Mark Rober
+39,SAKURA REVIEW
+40,IShowSpeed
+41,Đồ Chơi Điện
+42,Tra Án
+43,TheAnh96
+44,Dan fitness
+45,UEFA
+46,Bug::Is::Feature
+47,Netflix
+48,Nam Em Official
+49,Noo Phước Thịnh
+50,Hà Anh Tuấn
+51,Mây Saigon Official
+52,Trực Tiếp Game
+53,Khoai Lang Thang
+54,Charlie Puth
+55,BLV Anh Quân Discovery
