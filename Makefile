@@ -1,45 +1,43 @@
-.PHONY: help setup up down logs clean crawl list dbt-debug dbt-run dbt-test dbt-pipeline dbt-staging dbt-mart monitor quota-check estimate prefect-deploy prefect-logs prefect-restart
+.PHONY: help setup up down logs clean crawl list monitor quota estimate discover add-channel remove-channel history crawl-smart crawl-new dbt-debug dbt-run dbt-test dbt-pipeline prefect-deploy prefect-logs
 
 help:
 	@echo "YouTube Analytics Pipeline Commands"
-	@echo "===================================="
-	@echo "Setup & Services:"
-	@echo "  make setup       - Setup databases"
-	@echo "  make up          - Start all services"
-	@echo "  make down        - Stop services"
-	@echo "  make logs        - View logs"
-	@echo "  make clean       - Remove all"
 	@echo ""
-	@echo "Prefect Deployment:"
-	@echo "  make prefect-deploy  - Deploy workflows with schedule"
+	@echo "Setup:"
+	@echo "  make setup           - Setup PostgreSQL and BigQuery databases"
+	@echo "  make up              - Start Docker services"
+	@echo "  make down            - Stop Docker services"
+	@echo ""
+	@echo "Channel Management:"
+	@echo "  make discover        - Search and add channels from CSV"
+	@echo "  make add-channel     - Add single channel by name"
+	@echo "  make list            - List all channels in database"
+	@echo "  make remove-channel  - Remove channel from database"
+	@echo ""
+	@echo "Data Crawling:"
+	@echo "  make crawl-smart     - Smart crawl (auto full/incremental, limit 20)"
+	@echo "  make crawl-new       - Crawl never-crawled channels (limit 10)"
+	@echo "  make crawl           - Crawl scheduled channels (limit 10)"
+	@echo ""
+	@echo "Monitoring:"
+	@echo "  make quota           - Check API quota status"
+	@echo "  make history         - View crawl history"
+	@echo "  make monitor         - Full system status check"
+	@echo ""
+	@echo "DBT:"
+	@echo "  make dbt-run         - Run all dbt models"
+	@echo "  make dbt-test        - Run all dbt tests"
+	@echo "  make dbt-pipeline    - Full pipeline (deps -> run -> test)"
+	@echo ""
+	@echo "Prefect:"
+	@echo "  make prefect-deploy  - Deploy Prefect workflows"
 	@echo "  make prefect-logs    - View Prefect worker logs"
-	@echo "  make prefect-restart - Restart Prefect worker"
-	@echo ""
-	@echo "Monitoring & Status:"
-	@echo "  make monitor     - Check quota & system status"
-	@echo "  make quota-check - Check API quota only"
-	@echo "  make estimate N=15 - Estimate cost for N channels"
-	@echo ""
-	@echo "Data Extraction:"
-	@echo "  make crawl       - Crawl channels (limit 10)"
-	@echo "  make crawl-15    - Crawl 15 channels"
-	@echo "  make list        - List channels"
-	@echo ""
-	@echo "DBT Commands:"
-	@echo "  make dbt-debug    - Check dbt connection"
-	@echo "  make dbt-pipeline - Run full dbt pipeline (deps -> run -> test)"
-	@echo "  make dbt-run      - Run all dbt models"
-	@echo "  make dbt-test     - Run all dbt tests"
-	@echo "  make dbt-staging  - Run staging models only"
-	@echo "  make dbt-mart     - Run mart models only"
 
 setup:
 	python -m extract.cli setup
 
 up:
 	docker compose up -d
-	@echo "Prefect: http://localhost:4200"
-	@echo "Dashboard: http://localhost:8501"
 
 down:
 	docker compose down
@@ -47,7 +45,63 @@ down:
 logs:
 	docker compose logs -f
 
-# Prefect deployment
+discover:
+	python -m extract.cli discover config/channels_template.csv --output config/channels_found.csv
+
+add-channel:
+	@if [ -z "$(NAME)" ]; then \
+		echo "Usage: make add-channel NAME=\"Channel Name\""; \
+		echo "Example: make add-channel NAME=\"@MrBeast\""; \
+		exit 1; \
+	fi
+	python -m extract.cli add-by-name "$(NAME)"
+
+list:
+	python -m extract.cli list
+
+remove-channel:
+	@if [ -z "$(ID)" ]; then \
+		echo "Usage: make remove-channel ID=channel_id"; \
+		exit 1; \
+	fi
+	python -m extract.cli remove $(ID)
+
+crawl-smart:
+	python -m extract.cli crawl-smart --limit 20
+
+crawl-new:
+	python -m extract.cli crawl-new --limit 10
+
+crawl:
+	python -m extract.cli crawl-scheduled --limit 10
+
+quota:
+	python -m extract.cli quota
+
+history:
+	python -m extract.cli history --limit 20
+
+monitor:
+	python script/monitor_quota.py
+
+dbt-debug:
+	python script/dbt_cli.py debug
+
+dbt-run:
+	python script/dbt_cli.py run
+
+dbt-test:
+	python script/dbt_cli.py test
+
+dbt-pipeline:
+	python script/dbt_cli.py pipeline
+
+dbt-staging:
+	python script/dbt_cli.py run --select staging.*
+
+dbt-mart:
+	python script/dbt_cli.py run --select mart.*
+
 prefect-deploy:
 	python script/deploy_prefect.py
 
@@ -56,60 +110,6 @@ prefect-logs:
 
 prefect-restart:
 	docker compose restart prefect-worker
-
-# Monitoring commands
-monitor:
-	python script/monitor_quota.py
-
-quota-check:
-	python script/monitor_quota.py --quota-only
-
-estimate:
-	python script/monitor_quota.py --estimate $(N)
-
-# Crawl commands
-crawl:
-	python -m extract.cli crawl-file --limit 10
-
-crawl-15:
-	@echo "⚠️  Crawling 15 channels. Check quota first!"
-	python script/monitor_quota.py --quota-only
-	@echo ""
-	@read -p "Continue? [y/N]: " -n 1 -r; \
-	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-		python -m extract.cli crawl-file --limit 15; \
-	fi
-
-list:
-	python -m extract.cli channels
-
-# DBT Commands
-dbt-debug:
-	python script/dbt_cli.py debug
-
-dbt-pipeline:
-	python script/dbt_cli.py pipeline
-
-dbt-run:
-	python script/dbt_cli.py run
-
-dbt-test:
-	python script/dbt_cli.py test
-
-dbt-staging:
-	python script/dbt_cli.py run --select staging.*
-
-dbt-intermediate:
-	python script/dbt_cli.py run --select intermediate.*
-
-dbt-mart:
-	python script/dbt_cli.py run --select mart.*
-
-dbt-build:
-	python script/dbt_cli.py build
-
-dbt-deps:
-	python script/dbt_cli.py deps
 
 clean:
 	docker compose down -v

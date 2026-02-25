@@ -90,3 +90,8 @@ data/
 outputs/
 .prefect/
 .dbt/
+
+# Generated output files
+config/channels_found.csv
+config/channels_found_simple.csv
+logs/channel_verification_report.txt
