@@ -1,6 +1,6 @@
-"""
+﻿"""
 Prediction Explainer — tạo giải thích ngôn ngữ tự nhiên (tiếng Việt)
-cho output của Model A và Model B.
+cho output của Model B (video).
 """
 from __future__ import annotations
 
@@ -13,39 +13,6 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-# ─── Explanation Building Blocks ──────────────────────────────────────────────
-_CHANNEL_FACTOR_TEMPLATES: dict[str, dict] = {
-    "f1_efficiency": {
-        "high": "Kênh có hiệu suất views/subscriber vượt trội — nội dung thu hút được nhiều người xem vượt xa lượng subscriber.",
-        "medium": "Hiệu suất views/subscriber ở mức trung bình so với benchmark.",
-        "low": "Hiệu suất views/subscriber còn thấp — kênh chưa khai thác hết tiềm năng subscriber.",
-    },
-    "f2_loyalty": {
-        "high": "Tỷ lệ like/view cao — khán giả phản hồi tích cực và trung thành với kênh.",
-        "medium": "Tỷ lệ like/view ở mức bình thường.",
-        "low": "Tỷ lệ like/view thấp — có thể khán giả chưa thực sự gắn bó với nội dung.",
-    },
-    "f3_depth": {
-        "high": "Tỷ lệ comment/view cao — nội dung tạo ra nhiều thảo luận và tương tác sâu.",
-        "medium": "Mức độ thảo luận bình thường.",
-        "low": "Ít comment so với số views — nội dung chưa kích thích thảo luận.",
-    },
-    "f4_consistency": {
-        "high": "Upload đều đặn và nhất quán — yếu tố quan trọng để duy trì và xây dựng khán giả.",
-        "medium": "Tần suất upload tương đối ổn định.",
-        "low": "Upload không đều — có thể làm giảm lượt subscribe và giữ chân khán giả.",
-    },
-    "f7_engagement": {
-        "high": "Điểm engagement tổng hợp rất cao — kênh tạo ra nhiều tương tác trên mọi loại phản hồi.",
-        "medium": "Điểm engagement ở mức trung bình.",
-        "low": "Điểm engagement thấp — kênh cần cải thiện cách tương tác với khán giả.",
-    },
-    "f11_recent_trend": {
-        "high": "Xu hướng tăng trưởng trong video gần nhất — kênh đang trên đà phát triển tốt.",
-        "medium": "Tăng trưởng ổn định.",
-        "low": "Xu hướng 5 video gần đây thấp hơn trước — có dấu hiệu chậm lại.",
-    },
-}
 
 _VIDEO_FACTOR_TEMPLATES: dict[str, dict] = {
     "v1_like_ratio": {
@@ -76,30 +43,25 @@ _VIDEO_FACTOR_TEMPLATES: dict[str, dict] = {
 }
 
 
+
 class PredictionExplainer:
     """
-    Tạo explanation bằng tiếng Việt cho predictions của Model A và Model B.
+    Tạo explanation bằng tiếng Việt cho predictions của Model B (video).
     """
 
     def __init__(self) -> None:
-        self._channel_fe_percentiles: dict = {}
         self._video_feature_stats: dict = {}
 
     def fit(
         self,
-        channel_fe_percentiles: Optional[dict] = None,
         video_features_df: Optional[pd.DataFrame] = None,
     ) -> "PredictionExplainer":
         """
         Học distribution của features từ training data để so sánh.
 
         Args:
-            channel_fe_percentiles: Từ ChannelFeatureEngineer.get_percentiles()
-            video_features_df:      DataFrame chứa video features để tính stats
+            video_features_df:  DataFrame chứa video features để tính stats
         """
-        if channel_fe_percentiles:
-            self._channel_fe_percentiles = channel_fe_percentiles
-
         if video_features_df is not None:
             numeric_cols = video_features_df.select_dtypes(include="number").columns
             for col in numeric_cols:
@@ -112,70 +74,6 @@ class PredictionExplainer:
                         "mean": float(vals.mean()),
                     }
         return self
-
-    # ── Channel Explanation ────────────────────────────────────────────────────
-    def explain_channel(
-        self,
-        features: pd.DataFrame,
-        probability: float,
-        cluster_name: str = "",
-        feature_importances: Optional[dict[str, float]] = None,
-    ) -> dict:
-        """
-        Tạo explanation cho kênh.
-
-        Returns:
-            {
-                "summary": str,
-                "factors": [{"feature": str, "impact": str, "description": str}],
-                "risk_factors": [str],
-                "strengths": [str],
-            }
-        """
-        factors = []
-        strengths = []
-        risks = []
-
-        # Xác định mức độ ưu tiên feature theo importance
-        priority_features = list(_CHANNEL_FACTOR_TEMPLATES.keys())
-        if feature_importances:
-            priority_features = sorted(
-                [f for f in feature_importances if f in _CHANNEL_FACTOR_TEMPLATES],
-                key=lambda x: feature_importances.get(x, 0),
-                reverse=True,
-            )
-
-        for feat_name in priority_features[:5]:  # top 5 features
-            if feat_name not in features.columns:
-                continue
-            val = float(features[feat_name].iloc[0])
-            level = self._get_level(feat_name, val, "channel")
-            template = _CHANNEL_FACTOR_TEMPLATES.get(feat_name, {})
-            desc = template.get(level, "")
-            if not desc:
-                continue
-
-            impact = "positive" if level == "high" else ("negative" if level == "low" else "neutral")
-            factors.append({
-                "feature": feat_name,
-                "impact": impact,
-                "description": desc,
-                "value": self._format_value(feat_name, val),
-                "percentile": self._get_percentile(feat_name, val, "channel"),
-            })
-            if level == "high":
-                strengths.append(desc)
-            elif level == "low":
-                risks.append(desc)
-
-        summary = self._build_channel_summary(probability, cluster_name, len(strengths), len(risks))
-
-        return {
-            "summary": summary,
-            "factors": factors,
-            "risk_factors": risks,
-            "strengths": strengths,
-        }
 
     # ── Video Explanation ──────────────────────────────────────────────────────
     def explain_video(
@@ -273,12 +171,9 @@ class PredictionExplainer:
         }
 
     # ── Private Helpers ────────────────────────────────────────────────────────
-    def _get_level(self, feat: str, val: float, domain: str) -> str:
+    def _get_level(self, feat: str, val: float, domain: str = "video") -> str:
         """Phân loại val thành high / medium / low dựa trên distribution."""
-        stats_dict = (
-            self._channel_fe_percentiles if domain == "channel"
-            else self._video_feature_stats
-        )
+        stats_dict = self._video_feature_stats
         if feat not in stats_dict:
             return "medium"
         stats = stats_dict[feat]
@@ -288,11 +183,8 @@ class PredictionExplainer:
             return "low"
         return "medium"
 
-    def _get_percentile(self, feat: str, val: float, domain: str) -> Optional[int]:
-        stats_dict = (
-            self._channel_fe_percentiles if domain == "channel"
-            else self._video_feature_stats
-        )
+    def _get_percentile(self, feat: str, val: float, domain: str = "video") -> Optional[int]:
+        stats_dict = self._video_feature_stats
         if feat not in stats_dict:
             return None
         stats = stats_dict[feat]
@@ -316,24 +208,6 @@ class PredictionExplainer:
         return f"{val:.3f}"
 
     @staticmethod
-    def _build_channel_summary(
-        prob: float, cluster_name: str, n_strengths: int, n_risks: int
-    ) -> str:
-        pct = int(prob * 100)
-        tier = (
-            "cực cao" if prob > 0.85
-            else "cao" if prob > 0.70
-            else "trung bình" if prob > 0.50
-            else "thấp"
-        )
-        base = f"Kênh này có xác suất {pct}% tạo ra video viral — tiềm năng ở mức {tier}."
-        if cluster_name:
-            base += f" Kênh thuộc nhóm '{cluster_name}'."
-        if n_strengths > 0:
-            base += f" Có {n_strengths} điểm mạnh nổi bật."
-        if n_risks > 0:
-            base += f" Lưu ý {n_risks} yếu tố cần cải thiện."
-        return base
 
     @staticmethod
     def _build_video_summary(prediction: dict, channel_name: str, momentum: int) -> str:
