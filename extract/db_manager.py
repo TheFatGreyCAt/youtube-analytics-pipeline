@@ -275,6 +275,61 @@ class PostgresManager:
             }
         else:
             return {'quota_used': 0, 'daily_limit': 10000, 'percentage_used': 0}
+    
+    def get_last_crawled_video_date(self, channel_id: str) -> Optional[datetime]:
+        conn = psycopg2.connect(self.conn_str)
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT last_video_published_at 
+            FROM channels_config 
+            WHERE channel_id = %s
+        """, (channel_id,))
+        
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        return result[0] if result else None
+    
+    def update_last_video_date(self, channel_id: str, last_published_at: datetime):
+        conn = psycopg2.connect(self.conn_str)
+        cur = conn.cursor()
+        
+        cur.execute("""
+            UPDATE channels_config 
+            SET last_video_published_at = %s,
+                updated_at = NOW()
+            WHERE channel_id = %s
+        """, (last_published_at, channel_id))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+    
+    def should_full_crawl(self, channel_id: str) -> bool:
+        conn = psycopg2.connect(self.conn_str)
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT 
+                last_crawl_ts,
+                last_video_published_at,
+                EXTRACT(EPOCH FROM (NOW() - last_crawl_ts))/86400 as days_since_crawl
+            FROM channels_config 
+            WHERE channel_id = %s
+        """, (channel_id,))
+        
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if not result or not result[0]:
+            return True
+        
+        days_since_crawl = result[2]
+        
+        return days_since_crawl >= 7
 
 
 class BigQueryManager:
