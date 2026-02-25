@@ -1,5 +1,5 @@
-"""
-Unit tests cho Labels, Clustering, Model A và Model B.
+﻿"""
+Unit tests cho Video Labels v\u00e0 Model B.
 """
 from __future__ import annotations
 
@@ -8,17 +8,6 @@ import unittest
 import numpy as np
 import pandas as pd
 
-
-def _make_channel_df(n: int = 42) -> pd.DataFrame:
-    rng = np.random.default_rng(42)
-    return pd.DataFrame({
-        "channel_id": [f"ch_{i}" for i in range(n)],
-        "total_views": rng.integers(10_000_000, 10_000_000_000, n),
-        "total_likes": rng.integers(100_000, 50_000_000, n),
-        "total_comments": rng.integers(10_000, 5_000_000, n),
-        "subscriber_count": rng.integers(100_000, 50_000_000, n),
-        "total_videos_crawled": rng.integers(20, 500, n),
-    })
 
 
 def _make_video_df(n: int = 200) -> pd.DataFrame:
@@ -33,36 +22,6 @@ def _make_video_df(n: int = 200) -> pd.DataFrame:
         "engagement_score": rng.uniform(0, 20, n),
     })
 
-
-# ─── Label Creator ─────────────────────────────────────────────────────────────
-class TestChannelLabelCreator(unittest.TestCase):
-    def setUp(self):
-        from ml.src.models.label_creator import ChannelLabelCreator
-        self.creator = ChannelLabelCreator()
-        self.channel_df = _make_channel_df(42)
-
-    def test_creates_viral_column(self):
-        result = self.creator.create_labels(self.channel_df)
-        self.assertIn("is_viral_channel", result.columns)
-
-    def test_labels_are_binary(self):
-        result = self.creator.create_labels(self.channel_df)
-        unique_vals = set(result["is_viral_channel"].unique())
-        self.assertTrue(unique_vals.issubset({0, 1}))
-
-    def test_at_least_some_positives(self):
-        result = self.creator.create_labels(self.channel_df)
-        self.assertGreater(result["is_viral_channel"].sum(), 0)
-
-    def test_derived_metrics_non_negative(self):
-        result = self.creator.create_labels(self.channel_df)
-        for col in ["efficiency_ratio", "loyalty_ratio", "depth_ratio", "avg_views_per_video"]:
-            self.assertTrue((result[col] >= 0).all(), f"{col} có giá trị âm")
-
-    def test_thresholds_accessible(self):
-        self.creator.create_labels(self.channel_df)
-        thresholds = self.creator.get_thresholds()
-        self.assertIn("efficiency_p75", thresholds)
 
 
 class TestVideoLabelCreator(unittest.TestCase):
@@ -84,75 +43,6 @@ class TestVideoLabelCreator(unittest.TestCase):
         result = self.creator.create_labels(self.video_df)
         self.assertIn("relative_score", result.columns)
 
-
-# ─── Channel Clusterer ─────────────────────────────────────────────────────────
-class TestChannelClusterer(unittest.TestCase):
-    def setUp(self):
-        from ml.src.data.feature_engineer import ChannelFeatureEngineer
-        from ml.src.models.channel_clusterer import ChannelClusterer
-        channel_df = _make_channel_df(42)
-        self.fe = ChannelFeatureEngineer()
-        self.fe.fit(channel_df)
-        self.features = self.fe.transform(channel_df)
-        self.clusterer = ChannelClusterer()
-
-    def test_fit_without_autofind(self):
-        self.clusterer.n_clusters = 4
-        self.clusterer.fit(self.features, auto_find_k=False)
-        self.assertTrue(self.clusterer._is_fitted)
-
-    def test_assign_cluster_returns_valid(self):
-        self.clusterer.n_clusters = 4
-        self.clusterer.fit(self.features, auto_find_k=False)
-        cluster_id, distance, stats = self.clusterer.assign_cluster(self.features.iloc[[0]])
-        self.assertIn(cluster_id, range(4))
-        self.assertGreaterEqual(distance, 0)
-
-    def test_cluster_names_populated(self):
-        self.clusterer.n_clusters = 3
-        self.clusterer.fit(self.features, auto_find_k=False)
-        for cid in range(3):
-            name = self.clusterer.get_cluster_name(cid)
-            self.assertIsInstance(name, str)
-
-
-# ─── Model A ───────────────────────────────────────────────────────────────────
-class TestChannelViralClassifier(unittest.TestCase):
-    def setUp(self):
-        from ml.src.data.feature_engineer import ChannelFeatureEngineer
-        from ml.src.models.channel_classifier import ChannelViralClassifier
-        from ml.src.models.label_creator import ChannelLabelCreator
-        channel_df = _make_channel_df(30)
-        labeled = ChannelLabelCreator().create_labels(channel_df)
-        fe = ChannelFeatureEngineer()
-        fe.fit(labeled)
-        features = fe.transform(labeled)
-        features["is_viral_channel"] = labeled["is_viral_channel"].values
-        self.features = features
-        self.clf = ChannelViralClassifier()
-
-    def test_train_returns_metrics(self):
-        result = self.clf.train(self.features)
-        self.assertIn("accuracy", result)
-        self.assertIn("f1", result)
-
-    def test_predict_proba_in_range(self):
-        self.clf.train(self.features)
-        prob, conf = self.clf.predict_proba(self.features.iloc[[0]])
-        self.assertGreaterEqual(prob, 0.0)
-        self.assertLessEqual(prob, 1.0)
-        self.assertIn(conf, ["HIGH", "MEDIUM", "LOW"])
-
-    def test_feature_importances_keys(self):
-        self.clf.train(self.features)
-        fi = self.clf.get_feature_importances()
-        self.assertIsInstance(fi, dict)
-
-    def test_predict_without_train_raises(self):
-        from ml.src.models.channel_classifier import ChannelViralClassifier
-        clf = ChannelViralClassifier()
-        with self.assertRaises(RuntimeError):
-            clf.predict_proba(self.features.iloc[[0]])
 
 
 # ─── Model B ───────────────────────────────────────────────────────────────────
