@@ -1,11 +1,10 @@
-"""
-Report Generator — chuẩn hoá output thành ChannelReport và VideoReport.
-Format tuân theo spec trong prompt (Bước 7).
+﻿"""
+Report Generator — chuẩn hoá output thành VideoReport.
 """
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 
@@ -18,128 +17,6 @@ def _fmt_number(n: int | float) -> str:
     if n >= 1_000:
         return f"{n/1_000:.0f}K"
     return str(n)
-
-
-def _viral_label(prob: float) -> str:
-    if prob >= 0.85:
-        return "EXTREMELY HIGH"
-    if prob >= 0.70:
-        return "HIGH"
-    if prob >= 0.55:
-        return "MEDIUM"
-    if prob >= 0.40:
-        return "LOW"
-    return "VERY LOW"
-
-
-# ─── Channel Report ────────────────────────────────────────────────────────────
-@dataclass
-class ChannelReport:
-    input_name: str
-    channel_id: str
-    channel_name: str
-    subscribers: int
-    probability: float
-    confidence: str
-    cluster_id: int
-    cluster_name: str
-    explanation: dict
-    avg_views_per_video: int = 0
-    like_ratio: float = 0.0
-    comment_ratio: float = 0.0
-    recent_trend: float = 1.0
-    percentile_vs_benchmark: float = 50.0
-
-    def to_dict(self) -> dict:
-        upload_freq = "N/A"
-        trend_emoji = "Tang truong" if self.recent_trend > 1.05 else (
-            "Giam" if self.recent_trend < 0.95 else "On dinh"
-        )
-        # Clip to [5, 95] so displayed rank never shows "top 0%" or "top 100%"
-        p = max(5, min(95, int(self.percentile_vs_benchmark)))
-
-        return {
-            "input": self.input_name,
-            "channel_id": self.channel_id,
-            "channel_name": self.channel_name,
-            "subscribers": self.subscribers,
-
-            "viral_potential": {
-                "probability": self.probability,
-                "label": _viral_label(self.probability),
-                "confidence": self.confidence,
-                "percentile_vs_benchmark": p,
-            },
-
-            "cluster": {
-                "id": self.cluster_id,
-                "name": self.cluster_name,
-                "description": self._cluster_desc(),
-            },
-
-            "key_metrics": {
-                "avg_views_per_video": _fmt_number(self.avg_views_per_video),
-                "like_ratio": f"{self.like_ratio*100:.2f}% (top {max(1, 100-p)}% trong tier)",
-                "comment_ratio": f"{self.comment_ratio*100:.2f}%",
-                "upload_frequency": upload_freq,
-            },
-
-            "explanation": self.explanation.get("factors", []),
-            "summary": self.explanation.get("summary", ""),
-            "recent_trend": trend_emoji,
-            "risk_factors": self.explanation.get("risk_factors", []),
-            "strengths": self.explanation.get("strengths", []),
-            "data_source": "YouTube API (real-time) + BigQuery benchmark",
-        }
-
-    def print_report(self) -> None:
-        d = self.to_dict()
-        vp = d["viral_potential"]
-        km = d["key_metrics"]
-        sep = "-" * 50
-        print()
-        print(sep)
-        print(f"CHANNEL REPORT: {d['channel_name']}")
-        print(sep)
-        print(f"  Channel ID      : {d['channel_id']}")
-        print(f"  Subscribers     : {_fmt_number(self.subscribers)}")
-        print(f"  Tier            : {d['cluster']['name']}")
-        print()
-        print("  VIRAL POTENTIAL")
-        print(f"  Probability     : {vp['probability']*100:.1f}%")
-        print(f"  Label           : {vp['label']}")
-        print(f"  Confidence      : {vp['confidence']}")
-        print(f"  Rank in tier    : top {max(1, 100-vp['percentile_vs_benchmark'])}%")
-        print()
-        print("  KEY METRICS")
-        print(f"  Avg views/video : {km['avg_views_per_video']}")
-        print(f"  Like ratio      : {km['like_ratio']}")
-        print(f"  Comment ratio   : {km['comment_ratio']}")
-        print(f"  Recent trend    : {d['recent_trend']}")
-        print()
-        print(f"  Summary: {d['summary']}")
-        if d["risk_factors"]:
-            print()
-            print("  Risks:")
-            for r in d["risk_factors"]:
-                print(f"    - {r}")
-        print(sep)
-
-    def to_json(self, indent: int = 2) -> str:
-        return json.dumps(self.to_dict(), ensure_ascii=False, indent=indent)
-
-    def _cluster_desc(self) -> str:
-        templates = {
-            "Tier 0": "Kênh siêu lớn với lượng subscriber và views khổng lồ.",
-            "Tier 1": "Kênh lớn có tầm ảnh hưởng cao và engagement tốt.",
-            "Tier 2": "Kênh đang phát triển với audience trung thành.",
-            "Tier 3": "Kênh niche với nội dung chuyên biệt.",
-            "Tier 4": "Kênh nhỏ đang xây dựng audience.",
-        }
-        for key, desc in templates.items():
-            if key in self.cluster_name:
-                return desc
-        return "Nhóm kênh có đặc điểm tương đồng."
 
 
 # ─── Video Report ──────────────────────────────────────────────────────────────
@@ -222,7 +99,7 @@ class VideoReport:
         print(f"  Confidence  : {vp['confidence']}")
         print()
         print("  CURRENT PERFORMANCE")
-        print(f"  Views       : {cp['views']}")
+        print(f"  Views       : {cp['views']} (*)")
         print(f"  Views/hour  : {cp['views_per_hour']}")
         print(f"  vs Pace     : {cp['vs_channel_avg']}")
         print(f"  Percentile  : top {100-self.channel_percentile}%")
@@ -240,6 +117,9 @@ class VideoReport:
             print("  Warnings:")
             for w in d["warnings"]:
                 print(f"    - {w}")
+        print()
+        print("  (*) Views lay tu YouTube Data API — co the thap hon thuc te")
+        print("      do YouTube API co do tre cap nhat so voi trang web.")
         print(sep)
 
     def to_json(self, indent: int = 2) -> str:
