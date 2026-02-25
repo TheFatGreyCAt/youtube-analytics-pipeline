@@ -1,32 +1,5 @@
-channels:
-  - id: UCXuqSBlHAE6Xw-yeJA0Tunw
-    name: Linus Tech Tips
-    frequency_hours: 24
-    priority: 1
-    active: true
-    include_comments: false
-    
-  - id: UC4w1YQAJMWOz4qtxinq55LQ
-    name: MKBHD
-    frequency_hours: 24
-    priority: 1
-    active: true
-    include_comments: false
-  
-  - id: UCuMJPFqazQI4SofSFEd-5zA
-    name: Cô Ngân TV
-    frequency_hours: 12
-    priority: 2
-    active: true
-    include_comments: true
-    
-  - id: UCJ0-OtVpF0SU9F3RVKz__bg
-    name: Duy Thanh Nguyễn
-    frequency_hours: 24
-    priority: 1
-    active: true
-    include_comments: false
-
+﻿channels:
+  # ── MEGA CHANNELS (100M+) ──────────────────────────────────────
   - id: UCX6OQ3DkcsbYNE6H8uQQuVA
     name: MrBeast
     frequency_hours: 24
@@ -35,21 +8,29 @@ channels:
     include_comments: false
 
   - id: UCq-Fj5jknLsUf-MWSy4_brA
-    name: Tseries
+    name: T-Series
     frequency_hours: 24
     priority: 1
     active: true
     include_comments: false
 
-  - id: UCpEhnqL0y41EpW2TvWAHD7Q
-    name: Veritasium
+  - id: UCJplp5SjeGSdVdwsfb9Q7lQ
+    name: Like Nastya
     frequency_hours: 24
     priority: 1
     active: true
     include_comments: false
 
+  # ── LARGE CHANNELS (10M–100M) ─────────────────────────────────
   - id: UCBJycsmduvYEL83R_U4JriQ
     name: Marques Brownlee
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UC-lHJZR3Gqxm24_Vd_AJ5Yw
+    name: PewDiePie
     frequency_hours: 24
     priority: 1
     active: true
@@ -69,6 +50,42 @@ channels:
     active: true
     include_comments: false
 
+  - id: UCLXo7UDZvByw2ixzpQCufnA
+    name: Vox
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UC8butISFwT-Wl7EV0hUK0BQ
+    name: freeCodeCamp
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCY1kMZp36IQSyNx_9h4mpCg
+    name: Mark Rober
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  # ── ESTABLISHED CHANNELS (1M–10M) ────────────────────────────
+  - id: UCA_23dkEYToAc37hjSsCnXA
+    name: MixiGaming
+    frequency_hours: 12
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCpEhnqL0y41EpW2TvWAHD7Q
+    name: Veritasium
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
   - id: UC3KEoMzNz8eYnwBC34RaKCQ
     name: Vsauce
     frequency_hours: 24
@@ -76,8 +93,162 @@ channels:
     active: true
     include_comments: false
 
-  - id: UCLXo7UDZvByw2ixzpQCufnA
-    name: Vox
+  - id: UCXuqSBlHAE6Xw-yeJA0Tunw
+    name: Linus Tech Tips
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UC4w1YQAJMWOz4qtxinq55LQ
+    name: MKBHD
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCSHZKyawb77ixDdsGog4iWA
+    name: Lex Fridman
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UC6107grRI4m0o2-emgoDnAA
+    name: SmarterEveryDay
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCYO_jab_esuFRV4b17AJtAw
+    name: 3Blue1Brown
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCBa659QWEk1AI4Tg--mrJ2A
+    name: Tom Scott
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCSpFnDQr88xCZ80N-X7t0nQ
+    name: Corridor Crew
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UC2C_jShtL725hvbm1arSV9w
+    name: CGP Grey
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCuCkxoKLYO_EQ2GeFtbM_bw
+    name: Half as Interesting
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCmGSJVG3mCRXVOP4yZrU1Dw
+    name: Johnny Harris
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UC9RM-iSvTu1uPJb8X5yp3EQ
+    name: Wendover Productions
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCMOqf8ab-42UUQIdVoKwjlQ
+    name: Practical Engineering
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCP5tjEmvPItGyLhmjdwP7Ww
+    name: RealLifeLore
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCZ4AMrDcNrfy3X6nsU8-rPg
+    name: Economics Explained
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCpa-Zb0ZcQjTCPP1Dx_1M8Q
+    name: LegalEagle
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCvK4bOhULCpmLabd2pDMtnA
+    name: Yes Theory
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCnmGIkw-KdI0W5siakKPKog
+    name: Ryan Trahan
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UC415bOPUcGSamy543abLmRA
+    name: Cleo Abram
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCFhXFikryT4aFcLkLw2LBLA
+    name: NileRed
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UC2D2CMWXMOVWx7giW1n3LIg
+    name: Andrew Huberman
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCKzJFdi57J53Vr_BkTfN3uQ
+    name: Primer
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UConVfxXodg78Tzh5nNu85Ew
+    name: Welch Labs
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCJ5v_MCY6GNUBTO8-D3XoAg
+    name: WWE
     frequency_hours: 24
     priority: 1
     active: true
@@ -90,13 +261,7 @@ channels:
     active: true
     include_comments: false
 
-  - id: UCRcgy6GzDeccI7dkbbBna3Q
-    name: MEL Science
-    frequency_hours: 24
-    priority: 1
-    active: true
-    include_comments: false
-
+  # ── GROWING CHANNELS (100K–1M) ────────────────────────────────
   - id: UChIs72whgZI9w6d6FhwGGHA
     name: Fireship
     frequency_hours: 24
@@ -104,9 +269,227 @@ channels:
     active: true
     include_comments: false
 
+  - id: UCUHW94eEFW7hkUMVaZz4eDg
+    name: StatQuest with Josh Starmer
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCh9nVJoWXmFb7sLApWGcLPQ
+    name: Codebasics
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCLLw7jmFsvfIVaUFsLs8mlQ
+    name: Luke Barousse
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UC2UXDak6o7rBm23k3Vv5dww
+    name: Tina Huang
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCiT9RITQ9PW6BhXK0y2jaeg
+    name: Ken Jee
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCnVzApLJE2ljPZSeQylSEyg
+    name: 365 Data Science
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UC7cs8q-gJRlGwj4A8OmCmXg
+    name: Alex The Analyst
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCW5YeuERMmlnqo4oq8vwUpg
+    name: The Net Ninja
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UC9-y-6csu5WGm29I7JiwpnA
+    name: Computerphile
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCkw4JCwteGrDHIsyIIKo4tQ
+    name: Edureka
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCfzlCWGWYyIQ0aLC5w48gBQ
+    name: Sentdex
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCxX9wt5FWQUAAz4UrysqK9A
+    name: CS Dojo
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCsvqVGtbbyHaMoevxPAq9Fg
+    name: Tech With Tim
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCCezIgC97PvUuR4_gbFUs5g
+    name: Corey Schafer
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCJ24N4O0bP7LGLBDvye7oCA
+    name: Matt D'Avella
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCqrILQNl5Ed9Dz6CGMyvMTQ
+    name: Simply Explained
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCP7WmQ_U4GB3K51Od9QvM0w
+    name: Google Developers
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCRPMAqdtSgd0Ipeef7iFsKw
+    name: IBM Technology
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCbfYPyITQ-7l4upoX8nvctg
+    name: Two Minute Papers
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UC0RhatS1pyxInC00YKjjBqQ
+    name: Numberphile
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCiMhD4jzUqG-IgPzUmmytRQ
+    name: NeetCode
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCZCFT11CWBi3MHNlGf019nw
+    name: Abdul Bari
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UCeVMnSShP_Iviwkknt83cww
+    name: Code with Harry
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UC8n8ftV94ZU_DJLOLtrpORA
+    name: Web Dev Simplified
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  - id: UC29ju8bIPH5as8OGnQzwJyA
+    name: Traversy Media
+    frequency_hours: 24
+    priority: 1
+    active: true
+    include_comments: false
+
+  # ── VIETNAMESE CHANNELS ───────────────────────────────────────
+  - id: UCuMJPFqazQI4SofSFEd-5zA
+    name: Co Ngan TV
+    frequency_hours: 12
+    priority: 2
+    active: true
+    include_comments: true
+
+  - id: UC4Jw36rrtdMdW99PeCtNwxA
+    name: Vanh Leg
+    frequency_hours: 12
+    priority: 2
+    active: true
+    include_comments: false
+
+  - id: UC-AJnWGWhPt3ReFnvzRZ-Kg
+    name: Giang Oi
+    frequency_hours: 12
+    priority: 2
+    active: true
+    include_comments: false
+
+  - id: UC0jDoh3tVXCaqJ6oTve8ebA
+    name: FAPTV
+    frequency_hours: 12
+    priority: 2
+    active: true
+    include_comments: false
+
+  - id: UCiZJtnTQunvoY0xgv-Ce_rg
+    name: NTN Vlogs
+    frequency_hours: 12
+    priority: 2
+    active: true
+    include_comments: false
+
+  - id: UClyA28-01x4z60eWQ2kiNbA
+    name: Son Tung MTP
+    frequency_hours: 24
+    priority: 2
+    active: true
+    include_comments: false
+
 settings:
   max_videos_per_channel: 200
   max_comments_per_video: 100
-  batch_size: 10
+  batch_size: 100
   retry_failed_after_hours: 1
   api_delay_seconds: 0.5
