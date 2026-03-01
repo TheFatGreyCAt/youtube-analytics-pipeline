@@ -1,5 +1,5 @@
 model_version: v1
-trained_at: '2026-02-26T11:51:54.592557+00:00'
+trained_at: '2026-03-01T01:49:32.084418+00:00'
 feature_list:
 - published_hour
 - published_dayofweek
@@ -74,13 +74,13 @@ label_encoders:
       '28': 10
       '29': 11
 viral_threshold: 0.5
-optimal_threshold: 0.119504
-viral_rate_train: 20.92
-scale_pos_weight: 3.781
+optimal_threshold: 0.654172
+viral_rate_train: 20.52
+scale_pos_weight: 3.8725
 metrics:
-  roc_auc: 0.999958
-  pr_auc: 0.999883
-  f1: 0.994937
-  precision: 0.992424
-  recall: 0.997462
-  optimal_threshold: 0.119504
+  roc_auc: 0.999992
+  pr_auc: 0.999983
+  f1: 0.997967
+  precision: 0.995943
+  recall: 1.0
+  optimal_threshold: 0.654172
